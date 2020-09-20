@@ -18,11 +18,7 @@ struct worker_arg {
 struct thread_pool {
     size_t threads_len;
     work_item* work_queue;
-    size_t work_queue_capacity;
-    size_t work_queue_len;
-    size_t work_queue_start_current;
     pthread_t* threads;
-    pthread_mutex_t work_queue_mutex;
     struct worker_arg* worker_args;
 };
 
@@ -36,13 +32,6 @@ void* worker(void* v_arg) {
 
     return NULL;
 }
-
-typedef void (*free_fn)(void*);
-typedef void* (*realloc_fn)(void*, size_t);
-struct allocator {
-    free_fn free;
-    realloc_fn realloc;
-};
 
 int thread_pool_init(size_t len, struct thread_pool* thread_pool,
                      struct allocator* allocator) {
@@ -88,26 +77,16 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
 
     if (thread_pool->worker_args != NULL)
         allocator->free(thread_pool->worker_args);
-
-    /* if (thread_pool->work_queue_mutex != NULL) */
-    /*     pthread_mutex_destroy(thread_pool->work_queue_mutex); */
 }
 
 void thread_pool_work_pop(struct thread_pool* thread_pool) {}
 
 int thread_pool_work_push(struct thread_pool* thread_pool, work_item* work) {
-    int err;
-    if ((err = pthread_mutex_lock(&thread_pool->work_queue_mutex)) != 0)
-        return err;
-
     // FIXME
     /* thread_pool->work_queue_current_start_current = */
     /*     (thread_pool->work_queue_start_current + 1) % */
     /*     thread_pool->work_queue_capacity; */
     /* thread_pool->[thread_pool->work_queue_current] = work; */
-
-    if ((err = pthread_mutex_unlock(&thread_pool->work_queue_mutex)) != 0)
-        return err;
 
     return 0;
 }
