@@ -59,8 +59,10 @@ void thread_safe_queue_deinit(struct thread_safe_queue* queue,
 }
 
 int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
-    int err;
-    if ((err = pthread_mutex_lock(&queue->mutex)) != 0) return err;
+    int ret;
+    while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
+    }
+    if (ret != 0) return ret;
 
     {
         if (queue->len == queue->capacity) {
@@ -72,14 +74,16 @@ int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
         queue->len += 1;
     }
 
-    if ((err = pthread_mutex_unlock(&queue->mutex)) != 0) return err;
+    pthread_mutex_unlock(&queue->mutex);
 
     return 0;
 }
 
 int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
-    int err;
-    if ((err = pthread_mutex_lock(&queue->mutex)) != 0) return err;
+    int ret;
+    while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
+    }
+    if (ret != 0) return ret;
 
     {
         if (queue->len == 0) {
@@ -92,7 +96,7 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
         queue->start_current = (queue->start_current + 1) % queue->capacity;
     }
 
-    if ((err = pthread_mutex_unlock(&queue->mutex)) != 0) return err;
+    pthread_mutex_unlock(&queue->mutex);
 
     return 0;
 }
