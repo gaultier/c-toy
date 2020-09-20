@@ -24,6 +24,11 @@
 /* aco_exit(); */
 /* } */
 
+void print(void* arg) {
+    int* value = arg;
+    printf("PRINT %d\n", *value);
+}
+
 int main() {
     /* aco_thread_init(NULL); */
 
@@ -60,8 +65,24 @@ int main() {
     struct allocator allocator = {.realloc = realloc, .free = free};
     PG_ASSERT_EQ(thread_pool_init(&pool, 4, &allocator), 0, "%d");
 
+    int a = 5;
+    struct work_item work_a = {.arg = &a, .fn = print};
+    PG_ASSERT_EQ(thread_pool_push(&pool, &work_a), 0, "%d");
+
+    sleep(1);
     thread_pool_start(&pool);
-    sleep(5);
+
+    int b = 99;
+    struct work_item work_b = {.arg = &b, .fn = print};
+    PG_ASSERT_EQ(thread_pool_push(&pool, &work_b), 0, "%d");
+
+    sleep(1);
+
+    int c = 42;
+    struct work_item work_c = {.arg = &c, .fn = print};
+    PG_ASSERT_EQ(thread_pool_push(&pool, &work_c), 0, "%d");
+
+    sleep(2);
     thread_pool_stop(&pool);
     thread_pool_deinit(&pool, &allocator);
 }

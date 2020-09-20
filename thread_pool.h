@@ -1,17 +1,18 @@
 #pragma once
-#include <unistd.h>  // FIXME
+#include <time.h>
 
 #include "thread_safe_queue.h"
 #include "utils.h"
 
-typedef void* work_item;
-typedef void (*work_fn)(work_item);
+typedef void (*work_fn)(void*);
+struct work_item {
+    void* arg;
+    work_fn fn;
+};
 
 struct worker_arg {
     size_t id;
     struct thread_pool* thread_pool;
-    size_t* stopped;
-    work_fn fn;
 };
 
 struct thread_pool {
@@ -26,11 +27,20 @@ void* worker(void* v_arg) {
     struct worker_arg* arg = v_arg;
 
     int stopped;
-    while ((stopped = __atomic_load_n(arg->stopped, __ATOMIC_ACQUIRE)) == 0) {
-        printf("[%zu]\n", arg->id);
-        sleep(1);
+    while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
+                                      __ATOMIC_ACQUIRE)) == 0) {
+        struct work_item* item = NULL;
+        if (thread_safe_queue_pop(&arg->thread_pool->queue, (void**)&item) ==
+            0) {
+            PG_ASSERT_NOT_EQ(item, NULL, "%p");
+            PG_ASSERT_NOT_EQ(item->fn, NULL, "%p");
+
+            item->fn(item->arg);
+        } else {
+            const struct timespec time = {.tv_nsec = 10};
+            nanosleep(&time, NULL);
+        }
     }
-    printf("[%zu] stopped=%d\n", arg->id, stopped);
 
     return NULL;
 }
@@ -59,11 +69,10 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
 
 void thread_pool_start(struct thread_pool* thread_pool) {
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
-        thread_pool->worker_args[i] =
-            (struct worker_arg){.id = i,
-                                .thread_pool = thread_pool,
-                                .fn = NULL,
-                                .stopped = &thread_pool->stopped};
+        thread_pool->worker_args[i] = (struct worker_arg){
+            .id = i,
+            .thread_pool = thread_pool,
+        };
         PG_ASSERT_EQ(pthread_create(&thread_pool->threads[i], NULL, worker,
                                     &thread_pool->worker_args[i]),
                      0, "%d");
@@ -81,6 +90,10 @@ void thread_pool_stop(struct thread_pool* thread_pool) {
     thread_pool_join(thread_pool);
 }
 
+int thread_pool_push(struct thread_pool* thread_pool, struct work_item* work) {
+    return thread_safe_queue_push(&thread_pool->queue, work);
+}
+
 void thread_pool_deinit(struct thread_pool* thread_pool,
                         struct allocator* allocator) {
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
@@ -95,6 +108,7 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
         allocator->free(thread_pool->worker_args);
 }
 
-int thread_pool_work_push(struct thread_pool* thread_pool, work_item* work) {
+int thread_pool_work_push(struct thread_pool* thread_pool,
+                          struct work_item* work) {
     return thread_safe_queue_push(&thread_pool->queue, work);
 }
