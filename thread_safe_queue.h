@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "allocator.h"
+#include "utils.h"
 
 typedef void* data_t;
 struct thread_safe_queue {
@@ -41,18 +42,11 @@ struct thread_safe_queue {
         data[index] = val;                                                  \
     } while (0)
 
-void buf_get_at_ptr(data_t* data, size_t len, data_t* val, size_t index) {
-    if (index >= len) {
-        fprintf(stderr, "Error: accessing array at index %zu but len is %zu\n",
-                index, len);
-        exit(EINVAL);
-    }
-
-    *val = &(data[index]);
-}
-
 int thread_safe_queue_init(struct thread_safe_queue* queue,
                            struct allocator* allocator) {
+    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
+
     queue->capacity = 1000;
     queue->data = allocator->realloc(NULL, queue->capacity * sizeof(data_t));
     if (queue->data == NULL) return ENOMEM;
@@ -68,12 +62,18 @@ int thread_safe_queue_init(struct thread_safe_queue* queue,
 
 void thread_safe_queue_deinit(struct thread_safe_queue* queue,
                               struct allocator* allocator) {
+    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
+
     if (queue->data != NULL) allocator->free(queue->data);
 
     pthread_mutex_destroy(&queue->mutex);  // FIXME: was `mutex` init-ed ?
 }
 
 int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
+    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+
     int ret;
     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
     }
@@ -95,6 +95,9 @@ int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
 }
 
 int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
+    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+
     int ret;
     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
     }
