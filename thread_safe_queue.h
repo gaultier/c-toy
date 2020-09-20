@@ -66,7 +66,7 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
 
         *item = queue->data[queue->start_current];
         queue->len -= 1;
-        queue->start_current += 1;
+        queue->start_current = (queue->start_current + 1) % queue->capacity;
     }
 
     if ((err = pthread_mutex_unlock(&queue->mutex)) != 0) return err;
