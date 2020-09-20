@@ -62,8 +62,9 @@ void thread_pool_start(struct thread_pool* thread_pool) {
                                 .thread_pool = thread_pool,
                                 .fn = NULL,
                                 .running = &thread_pool->running};
-        pthread_create(&thread_pool->threads[i], NULL, worker,
-                       &thread_pool->worker_args[i]);
+        PG_ASSERT_EQ(pthread_create(&thread_pool->threads[i], NULL, worker,
+                                    &thread_pool->worker_args[i]),
+                     0, "%d");
     }
 }
 
