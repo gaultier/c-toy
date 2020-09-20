@@ -3,6 +3,15 @@
 #include <criterion/criterion.h>
 #include <stdlib.h>
 
+/* Test(buf, buf_get_at_ptr) { */
+/*     int data[5] = {1, 2, 3, 4, 5}; */
+/*     int *val = NULL; */
+/*     buf_get_at_ptr((data_t *)&data, 5, (data_t *)&val, 4); */
+
+/*     cr_expect_neq(val, NULL); */
+/*     cr_expect_eq(*val, 4); */
+/* } */
+
 Test(thread_safe_queue, init) {
     struct thread_safe_queue queue;
     struct allocator allocator = {.realloc = realloc, .free = free};
