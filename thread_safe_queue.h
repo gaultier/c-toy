@@ -18,6 +18,7 @@ struct thread_safe_queue {
 
 #define buf_get_at(data, len, val, index)                                   \
     do {                                                                    \
+        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
         if (index >= len) {                                                 \
             fprintf(                                                        \
                 stderr,                                                     \
@@ -31,6 +32,7 @@ struct thread_safe_queue {
 
 #define buf_set_at(data, len, val, index)                                   \
     do {                                                                    \
+        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
         if (index >= len) {                                                 \
             fprintf(                                                        \
                 stderr,                                                     \
