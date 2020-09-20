@@ -2,24 +2,39 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>  // FIXME
 
 /* #include "aco.h" */
 
 typedef void* work_item;
+typedef void (*work_fn)(work_item);
+
+struct worker_arg {
+    size_t id;
+    struct thread_pool* thread_pool;
+    work_fn fn;
+};
+
 struct thread_pool {
-    size_t len;
+    size_t threads_len;
     work_item* work_queue;
     size_t work_queue_capacity;
     size_t work_queue_len;
     size_t work_queue_start_current;
     pthread_t* threads;
     pthread_mutex_t* work_queue_mutex;
+    struct worker_arg* worker_args;
 };
 
-typedef void (*work_fn)(work_item);
-void worker(work_item* work_queue, work_fn fn) {
+void* worker(void* v_arg) {
+    struct worker_arg* arg = v_arg;
+
     while (1) {
+        printf("[%zu]\n", arg->id);
+        sleep(1);
     }
+
+    return NULL;
 }
 
 typedef void (*free_fn)(void*);
@@ -39,13 +54,24 @@ int thread_pool_init(size_t len, struct thread_pool* thread_pool,
         allocator->realloc(NULL, work_queue_capacity * sizeof(work_item));
     if (thread_pool->work_queue == NULL) return ENOMEM;
 
-    thread_pool->len = len;
+    thread_pool->threads_len = len;
     thread_pool->work_queue_capacity = work_queue_capacity * sizeof(work_item);
     thread_pool->work_queue_len = 0;
 
     int err;
     if ((err = pthread_mutex_init(thread_pool->work_queue_mutex, NULL)) != 0)
         return err;
+
+    thread_pool->worker_args =
+        allocator->realloc(NULL, len * sizeof(struct worker_arg));
+    if (thread_pool->worker_args == NULL) return ENOMEM;
+
+    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+        thread_pool->worker_args[i] = (struct worker_arg){
+            .id = i, .thread_pool = thread_pool, .fn = NULL};
+        pthread_create(&thread_pool->threads[i], NULL, worker,
+                       &thread_pool->worker_args[i]);
+    }
 
     return 0;
 }
@@ -55,6 +81,13 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
     if (thread_pool->threads != NULL) allocator->free(thread_pool->threads);
     if (thread_pool->work_queue != NULL)
         allocator->free(thread_pool->work_queue);
+
+    if (thread_pool->worker_args != NULL)
+        allocator->free(thread_pool->worker_args);
+
+    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+        pthread_join(thread_pool->threads[i], NULL);
+    }
 }
 
 void thread_pool_work_pop(struct thread_pool* thread_pool) {}
