@@ -49,3 +49,19 @@ Test(thread_safe_queue, push_pop) {
         cr_expect_eq(*((int *)popped), 1);
     }
 }
+
+Test(thread_safe_queue, push_nomem) {
+    struct thread_safe_queue queue;
+    struct allocator allocator = {.realloc = realloc, .free = free};
+
+    cr_expect_eq(thread_safe_queue_init(&queue, &allocator), 0);
+
+    // Push
+    int items[1000];
+    for (size_t i = 0; i < 1000; i++) {
+        items[i] = i;
+        cr_expect_eq(thread_safe_queue_push(&queue, &items[i]), 0);
+    }
+
+    cr_expect_eq(thread_safe_queue_push(&queue, &items[0]), ENOMEM);
+}
