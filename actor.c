@@ -22,7 +22,7 @@ struct thread_pool {
     size_t work_queue_len;
     size_t work_queue_start_current;
     pthread_t* threads;
-    pthread_mutex_t* work_queue_mutex;
+    pthread_mutex_t work_queue_mutex;
     struct worker_arg* worker_args;
 };
 
@@ -59,7 +59,7 @@ int thread_pool_init(size_t len, struct thread_pool* thread_pool,
     thread_pool->work_queue_len = 0;
 
     int err;
-    if ((err = pthread_mutex_init(thread_pool->work_queue_mutex, NULL)) != 0)
+    if ((err = pthread_mutex_init(&thread_pool->work_queue_mutex, NULL)) != 0)
         return err;
 
     thread_pool->worker_args =
@@ -78,6 +78,10 @@ int thread_pool_init(size_t len, struct thread_pool* thread_pool,
 
 void thread_pool_deinit(struct thread_pool* thread_pool,
                         struct allocator* allocator) {
+    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+        pthread_join(thread_pool->threads[i], NULL);
+    }
+
     if (thread_pool->threads != NULL) allocator->free(thread_pool->threads);
     if (thread_pool->work_queue != NULL)
         allocator->free(thread_pool->work_queue);
@@ -85,16 +89,15 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
     if (thread_pool->worker_args != NULL)
         allocator->free(thread_pool->worker_args);
 
-    for (size_t i = 0; i < thread_pool->threads_len; i++) {
-        pthread_join(thread_pool->threads[i], NULL);
-    }
+    /* if (thread_pool->work_queue_mutex != NULL) */
+    /*     pthread_mutex_destroy(thread_pool->work_queue_mutex); */
 }
 
 void thread_pool_work_pop(struct thread_pool* thread_pool) {}
 
 int thread_pool_work_push(struct thread_pool* thread_pool, work_item* work) {
     int err;
-    if ((err = pthread_mutex_lock(thread_pool->work_queue_mutex)) != 0)
+    if ((err = pthread_mutex_lock(&thread_pool->work_queue_mutex)) != 0)
         return err;
 
     // FIXME
@@ -103,7 +106,7 @@ int thread_pool_work_push(struct thread_pool* thread_pool, work_item* work) {
     /*     thread_pool->work_queue_capacity; */
     /* thread_pool->[thread_pool->work_queue_current] = work; */
 
-    if ((err = pthread_mutex_unlock(thread_pool->work_queue_mutex)) != 0)
+    if ((err = pthread_mutex_unlock(&thread_pool->work_queue_mutex)) != 0)
         return err;
 
     return 0;
