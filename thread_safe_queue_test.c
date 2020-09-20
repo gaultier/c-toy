@@ -130,6 +130,7 @@ void *push_pop(void *arg) {
 
     return NULL;
 }
+
 Test(thread_safe_queue, push_pop_multi) {
     struct thread_safe_queue queue;
     struct allocator allocator = {.realloc = realloc, .free = free};
