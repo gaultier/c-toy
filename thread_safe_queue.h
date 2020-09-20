@@ -18,12 +18,27 @@ struct thread_safe_queue {
 #define buf_get_at(data, len, val, index)                                   \
     do {                                                                    \
         if (index >= len) {                                                 \
-            fprintf(stderr,                                                 \
-                    "Error: accessing array at index %zu but len is %zu\n", \
-                    index, len);                                            \
+            fprintf(                                                        \
+                stderr,                                                     \
+                __FILE__                                                    \
+                ":%d:Error: accessing array at index %zu but len is %zu\n", \
+                __LINE__, index, len);                                      \
             exit(EINVAL);                                                   \
         }                                                                   \
         val = data[index];                                                  \
+    } while (0)
+
+#define buf_set_at(data, len, val, index)                                   \
+    do {                                                                    \
+        if (index >= len) {                                                 \
+            fprintf(                                                        \
+                stderr,                                                     \
+                __FILE__                                                    \
+                ":%d:Error: accessing array at index %zu but len is %zu\n", \
+                __LINE__, index, len);                                      \
+            exit(EINVAL);                                                   \
+        }                                                                   \
+        data[index] = val;                                                  \
     } while (0)
 
 void buf_get_at_ptr(data_t* data, size_t len, data_t* val, size_t index) {
@@ -70,7 +85,7 @@ int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
             return ENOMEM;
         }
         const size_t i = (queue->start_current + queue->len) % queue->capacity;
-        queue->data[i] = item;
+        buf_set_at(queue->data, queue->capacity, item, i);
         queue->len += 1;
     }
 
