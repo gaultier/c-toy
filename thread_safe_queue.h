@@ -40,7 +40,10 @@ int thread_safe_queue_push(struct thread_safe_queue* queue, data_t item) {
     if ((err = pthread_mutex_lock(&queue->mutex)) != 0) return err;
 
     {
-        if (queue->len == queue->capacity) return ENOMEM;
+        if (queue->len == queue->capacity) {
+            pthread_mutex_unlock(&queue->mutex);
+            return ENOMEM;
+        }
         const size_t i = (queue->start_current + queue->len) % queue->capacity;
         queue->data[i] = item;
         queue->len += 1;
@@ -56,7 +59,10 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
     if ((err = pthread_mutex_lock(&queue->mutex)) != 0) return err;
 
     {
-        if (queue->len == 0) return EINVAL;
+        if (queue->len == 0) {
+            pthread_mutex_unlock(&queue->mutex);
+            return EINVAL;
+        }
 
         *item = queue->data[queue->start_current];
         queue->len -= 1;

@@ -40,13 +40,17 @@ Test(thread_safe_queue, push_pop) {
 
     // Push
     int pushed = 1;
-    { cr_expect_eq(thread_safe_queue_push(&queue, &pushed), 0); }
+    {
+        cr_expect_eq(thread_safe_queue_push(&queue, &pushed), 0);
+        cr_expect_eq(queue.len, 1);
+    }
 
     // Pop
     {
         void *popped = NULL;
         cr_expect_eq(thread_safe_queue_pop(&queue, &popped), 0);
         cr_expect_eq(*((int *)popped), 1);
+        cr_expect_eq(queue.len, 0);
     }
 }
 
@@ -61,7 +65,18 @@ Test(thread_safe_queue, push_nomem) {
     for (size_t i = 0; i < 1000; i++) {
         items[i] = i;
         cr_expect_eq(thread_safe_queue_push(&queue, &items[i]), 0);
+        cr_expect_eq(queue.len, i + 1);
     }
 
     cr_expect_eq(thread_safe_queue_push(&queue, &items[0]), ENOMEM);
+    cr_expect_eq(queue.len, 1000);
+
+    cr_expect_eq(thread_safe_queue_push(&queue, &items[0]), ENOMEM);
+    cr_expect_eq(queue.len, 1000);
+
+    void *popped = NULL;
+    cr_expect_eq(thread_safe_queue_pop(&queue, &popped), 0);
+    cr_expect_eq(queue.len, 999);
+    cr_expect_eq(thread_safe_queue_push(&queue, &items[0]), 0);
+    cr_expect_eq(queue.len, 1000);
 }
