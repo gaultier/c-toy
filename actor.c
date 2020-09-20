@@ -1,8 +1,8 @@
-#include <errno.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>  // FIXME
+#include <unistd.h>
+
+#include "thread_pool.h"
 
 /* #include "aco.h" */
 
@@ -56,12 +56,12 @@ int main() {
     /* aco_destroy(main_co); */
     /* main_co = NULL; */
 
+    struct thread_pool pool;
     struct allocator allocator = {.realloc = realloc, .free = free};
-    struct thread_pool thread_pool;
-    int err = 0;
-    if ((err = thread_pool_init(4, &thread_pool, &allocator)) != 0) return err;
+    PG_ASSERT_EQ(thread_pool_init(&pool, 4, &allocator), 0, "%d");
 
-    thread_pool_deinit(&thread_pool, &allocator);
-
-    return 0;
+    thread_pool_start(&pool);
+    sleep(5);
+    thread_pool_stop(&pool);
+    thread_pool_deinit(&pool, &allocator);
 }

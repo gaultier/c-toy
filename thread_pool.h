@@ -10,7 +10,7 @@ typedef void (*work_fn)(work_item);
 struct worker_arg {
     size_t id;
     struct thread_pool* thread_pool;
-    size_t* running;
+    size_t* stopped;
     work_fn fn;
 };
 
@@ -19,18 +19,18 @@ struct thread_pool {
     struct thread_safe_queue queue;
     pthread_t* threads;
     struct worker_arg* worker_args;
-    size_t running;
+    size_t stopped;
 };
 
 void* worker(void* v_arg) {
     struct worker_arg* arg = v_arg;
 
-    while (*(arg->running)) {
+    int stopped;
+    while ((stopped = __atomic_load_n(arg->stopped, __ATOMIC_ACQUIRE)) == 0) {
         printf("[%zu]\n", arg->id);
         sleep(1);
-
-        __atomic_load_n(arg->running, __ATOMIC_ACQUIRE);
     }
+    printf("[%zu] stopped=%d\n", arg->id, stopped);
 
     return NULL;
 }
@@ -52,6 +52,8 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
         allocator->realloc(NULL, len * sizeof(struct worker_arg));
     if (thread_pool->worker_args == NULL) return ENOMEM;
 
+    thread_pool->stopped = 0;
+
     return 0;
 }
 
@@ -61,19 +63,22 @@ void thread_pool_start(struct thread_pool* thread_pool) {
             (struct worker_arg){.id = i,
                                 .thread_pool = thread_pool,
                                 .fn = NULL,
-                                .running = &thread_pool->running};
+                                .stopped = &thread_pool->stopped};
         PG_ASSERT_EQ(pthread_create(&thread_pool->threads[i], NULL, worker,
                                     &thread_pool->worker_args[i]),
                      0, "%d");
     }
 }
 
-void thread_pool_stop(struct thread_pool* thread_pool) {
-    __atomic_fetch_add(&thread_pool->running, 1, __ATOMIC_ACQUIRE);
-
+void thread_pool_join(struct thread_pool* thread_pool) {
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
         PG_ASSERT_EQ(pthread_join(thread_pool->threads[i], NULL), 0, "%d");
     }
+}
+
+void thread_pool_stop(struct thread_pool* thread_pool) {
+    __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);
+    thread_pool_join(thread_pool);
 }
 
 void thread_pool_deinit(struct thread_pool* thread_pool,
