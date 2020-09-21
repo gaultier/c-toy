@@ -54,3 +54,8 @@ struct actor_msg {
 int actor_send_message(struct actor* sender, struct actor_msg* msg) {
     return thread_safe_queue_push(&sender->message_queue, msg);  // FIXME
 }
+
+int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
+    return thread_safe_queue_pop(&actor->message_queue,
+                                 (thread_safe_queue_data_t*)msg);  // FIXME
+}
