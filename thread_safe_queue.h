@@ -7,12 +7,12 @@
 #include "allocator.h"
 #include "utils.h"
 
-typedef void* data_t;
+typedef void* thread_safe_queue_data_t;
 struct thread_safe_queue {
     size_t capacity;
     size_t len;
     size_t start_current;
-    data_t* data;
+    thread_safe_queue_data_t* data;
     pthread_mutex_t mutex;
 };
 
@@ -50,7 +50,8 @@ int thread_safe_queue_init(struct thread_safe_queue* queue,
     PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
 
     queue->capacity = 1000;
-    queue->data = allocator->realloc(NULL, queue->capacity * sizeof(data_t));
+    queue->data = allocator->realloc(
+        NULL, queue->capacity * sizeof(thread_safe_queue_data_t));
     if (queue->data == NULL) return ENOMEM;
 
     queue->len = 0;
@@ -72,7 +73,8 @@ void thread_safe_queue_deinit(struct thread_safe_queue* queue,
     pthread_mutex_destroy(&queue->mutex);  // FIXME: was `mutex` init-ed ?
 }
 
-int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
+int thread_safe_queue_push(struct thread_safe_queue* queue,
+                           const thread_safe_queue_data_t item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
@@ -96,7 +98,8 @@ int thread_safe_queue_push(struct thread_safe_queue* queue, const data_t item) {
     return 0;
 }
 
-int thread_safe_queue_pop(struct thread_safe_queue* queue, data_t* item) {
+int thread_safe_queue_pop(struct thread_safe_queue* queue,
+                          thread_safe_queue_data_t* item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 

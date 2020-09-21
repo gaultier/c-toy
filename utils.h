@@ -27,3 +27,32 @@ void pg_nanosleep(size_t ns) {
     const struct timespec time = {.tv_nsec = ns};
     nanosleep(&time, NULL);
 }
+
+#define buf_get_at(data, len, val, index)                                   \
+    do {                                                                    \
+        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
+        if (index >= len) {                                                 \
+            fprintf(                                                        \
+                stderr,                                                     \
+                __FILE__                                                    \
+                ":%d:Error: accessing array at index %zu but len is %zu\n", \
+                __LINE__, index, len);                                      \
+            exit(EINVAL);                                                   \
+        }                                                                   \
+        val = data[index];                                                  \
+    } while (0)
+
+#define buf_set_at(data, len, val, index)                                   \
+    do {                                                                    \
+        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
+        if (index >= len) {                                                 \
+            fprintf(                                                        \
+                stderr,                                                     \
+                __FILE__                                                    \
+                ":%d:Error: accessing array at index %zu but len is %zu\n", \
+                __LINE__, index, len);                                      \
+            exit(EINVAL);                                                   \
+        }                                                                   \
+        data[index] = val;                                                  \
+    } while (0)
+

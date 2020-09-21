@@ -24,7 +24,7 @@ Test(thread_safe_queue, pop_empty) {
 
     cr_expect_eq(thread_safe_queue_init(&queue, &allocator), 0);
 
-    data_t item;
+    thread_safe_queue_data_t item;
     cr_expect_eq(thread_safe_queue_pop(&queue, &item), EINVAL);
     cr_expect_eq(queue.len, 0);
 }
