@@ -112,7 +112,7 @@ void thread_pool_wait_until_finished(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool->worker_args, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
 
-    while (thread_pool->queue.len != 0) {
+    while (thread_safe_queue_len(&thread_pool->queue) != 0) {
         pg_nanosleep(10);
     }
     __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);

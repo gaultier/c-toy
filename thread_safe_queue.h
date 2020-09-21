@@ -16,6 +16,10 @@ struct thread_safe_queue {
     pthread_mutex_t mutex;
 };
 
+size_t thread_safe_queue_len(struct thread_safe_queue* queue) {
+    return __atomic_load_n(&queue->len, __ATOMIC_ACQUIRE);
+}
+
 int thread_safe_queue_init(struct thread_safe_queue* queue,
                            struct allocator* allocator) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
@@ -49,8 +53,6 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
                            const thread_safe_queue_data_t item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
-    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
-    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -59,16 +61,21 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
     if (ret != 0) return ret;
 
     {
-        if (queue->len == queue->capacity) {
+        PG_ASSERT_COND(thread_safe_queue_len(queue), <=, queue->capacity,
+                       "%zu");
+        PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+
+        if (thread_safe_queue_len(queue) == queue->capacity) {
             pthread_mutex_unlock(&queue->mutex);
             return ENOMEM;
         }
-        const size_t i = (queue->start_current + queue->len) % queue->capacity;
+        const size_t i = (queue->start_current + thread_safe_queue_len(queue)) %
+                         queue->capacity;
         buf_set_at(queue->data, queue->capacity, item, i);
-        queue->len += 1;
+        __atomic_fetch_add(&queue->len, 1, __ATOMIC_ACQUIRE);
     }
 
-    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(thread_safe_queue_len(queue), <=, queue->capacity, "%zu");
     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);
@@ -80,8 +87,6 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue,
                           thread_safe_queue_data_t* item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
-    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
-    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -90,17 +95,22 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue,
     if (ret != 0) return ret;
 
     {
-        if (queue->len == 0) {
+        PG_ASSERT_COND(thread_safe_queue_len(queue), <=, queue->capacity,
+                       "%zu");
+        PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+
+        if (thread_safe_queue_len(queue) == 0) {
             pthread_mutex_unlock(&queue->mutex);
             return EINVAL;
         }
 
         buf_get_at(queue->data, queue->capacity, *item, queue->start_current);
-        queue->len -= 1;
+
+        __atomic_fetch_add(&queue->len, -1, __ATOMIC_ACQUIRE);
         queue->start_current = (queue->start_current + 1) % queue->capacity;
     }
 
-    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(thread_safe_queue_len(queue), <=, queue->capacity, "%zu");
     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);

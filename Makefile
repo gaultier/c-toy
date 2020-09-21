@@ -20,7 +20,7 @@ thread_pool_test: thread_pool_test.c thread_pool.h utils.h
 	$(CC) $(CFLAGS) -fsanitize=address -lcriterion $< -o $@
 
 actor: actor.c thread_pool.h thread_safe_queue.h utils.h
-	$(CC) $(CFLAGS) -fsanitize=address $< -o $@
+	$(CC) $(CFLAGS) -fsanitize=thread $< -o $@
 
 clean:
 	rm -rf ./thread_safe_queue_test ./thread_pool_test ./a.out ./*.dSYM ./actor

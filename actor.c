@@ -1,8 +1,8 @@
+#include "actor.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-#include "thread_pool.h"
 
 /* #include "aco.h" */
 
@@ -26,7 +26,10 @@
 
 void print(void* arg) {
     int* value = arg;
-    printf("PRINT %d\n", *value);
+    if (value)
+        printf("PRINT %d\n", *value);
+    else
+        puts("PRINT NULL");
 }
 
 int main() {
@@ -61,27 +64,16 @@ int main() {
     /* aco_destroy(main_co); */
     /* main_co = NULL; */
 
-    struct thread_pool pool;
     struct allocator allocator = {.realloc = realloc, .free = free};
+    struct thread_pool pool;
     PG_ASSERT_EQ(thread_pool_init(&pool, 4, &allocator), 0, "%d");
 
-    int a = 5;
-    struct thread_pool_work_item work_a = {.arg = &a, .fn = print};
-    PG_ASSERT_EQ(thread_pool_push(&pool, &work_a), 0, "%d");
+    struct actor actor;
+    PG_ASSERT_EQ(actor_init(&pool, print, &actor, &allocator), 0, "%d");
 
-    sleep(1);
     thread_pool_start(&pool);
-
-    int b = 99;
-    struct thread_pool_work_item work_b = {.arg = &b, .fn = print};
-    PG_ASSERT_EQ(thread_pool_push(&pool, &work_b), 0, "%d");
-
-    sleep(1);
-
-    int c = 42;
-    struct thread_pool_work_item work_c = {.arg = &c, .fn = print};
-    PG_ASSERT_EQ(thread_pool_push(&pool, &work_c), 0, "%d");
 
     thread_pool_wait_until_finished(&pool);
     thread_pool_deinit(&pool, &allocator);
+    actor_deinit(&actor, &allocator);
 }
