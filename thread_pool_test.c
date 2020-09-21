@@ -42,9 +42,7 @@ Test(thread_pool, run_stop) {
     struct work_item work_c = {.arg = &count, .fn = incr};
     cr_expect_eq(thread_pool_push(&pool, &work_c), 0);
 
-    while (count != 3) {
-    }
-    thread_pool_stop(&pool);
+    thread_pool_wait_until_finished(&pool);
     thread_pool_deinit(&pool, &allocator);
 
     cr_expect_eq(count, 3);

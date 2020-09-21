@@ -1,5 +1,4 @@
 #pragma once
-#include <time.h>
 
 #include "thread_safe_queue.h"
 #include "utils.h"
@@ -38,8 +37,7 @@ void* worker(void* v_arg) {
 
             item->fn(item->arg);
         } else {
-            const struct timespec time = {.tv_nsec = 10};
-            nanosleep(&time, NULL);
+            pg_nanosleep(10);
         }
     }
 
@@ -96,6 +94,16 @@ void thread_pool_join(struct thread_pool* thread_pool) {
 void thread_pool_stop(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
 
+    __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);
+    thread_pool_join(thread_pool);
+}
+
+void thread_pool_wait_until_finished(struct thread_pool* thread_pool) {
+    PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
+
+    while (thread_pool->queue.len != 0) {
+        pg_nanosleep(10);
+    }
     __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);
     thread_pool_join(thread_pool);
 }

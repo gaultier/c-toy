@@ -1,4 +1,5 @@
 #pragma once
+#include <time.h>
 
 #define PG_ASSERT_EQ(actual, expected, fmt)                           \
     do {                                                              \
@@ -21,3 +22,8 @@
             exit(EINVAL);                                             \
         }                                                             \
     } while (0)
+
+void pg_nanosleep(size_t ns) {
+    const struct timespec time = {.tv_nsec = ns};
+    nanosleep(&time, NULL);
+}

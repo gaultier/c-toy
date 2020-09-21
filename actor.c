@@ -82,7 +82,6 @@ int main() {
     struct work_item work_c = {.arg = &c, .fn = print};
     PG_ASSERT_EQ(thread_pool_push(&pool, &work_c), 0, "%d");
 
-    sleep(2);
-    thread_pool_stop(&pool);
+    thread_pool_wait_until_finished(&pool);
     thread_pool_deinit(&pool, &allocator);
 }
