@@ -50,6 +50,7 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
     PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -68,6 +69,7 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
     }
 
     PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);
 
@@ -79,6 +81,7 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue,
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
     PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -98,6 +101,7 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue,
     }
 
     PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
+    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);
 
