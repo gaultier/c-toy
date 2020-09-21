@@ -66,20 +66,20 @@ int main() {
     PG_ASSERT_EQ(thread_pool_init(&pool, 4, &allocator), 0, "%d");
 
     int a = 5;
-    struct work_item work_a = {.arg = &a, .fn = print};
+    struct thread_pool_work_item work_a = {.arg = &a, .fn = print};
     PG_ASSERT_EQ(thread_pool_push(&pool, &work_a), 0, "%d");
 
     sleep(1);
     thread_pool_start(&pool);
 
     int b = 99;
-    struct work_item work_b = {.arg = &b, .fn = print};
+    struct thread_pool_work_item work_b = {.arg = &b, .fn = print};
     PG_ASSERT_EQ(thread_pool_push(&pool, &work_b), 0, "%d");
 
     sleep(1);
 
     int c = 42;
-    struct work_item work_c = {.arg = &c, .fn = print};
+    struct thread_pool_work_item work_c = {.arg = &c, .fn = print};
     PG_ASSERT_EQ(thread_pool_push(&pool, &work_c), 0, "%d");
 
     thread_pool_wait_until_finished(&pool);

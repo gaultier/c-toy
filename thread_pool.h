@@ -4,7 +4,7 @@
 #include "utils.h"
 
 typedef void (*work_fn)(void*);
-struct work_item {
+struct thread_pool_work_item {
     void* arg;
     work_fn fn;
 };
@@ -29,7 +29,7 @@ void* worker(void* v_arg) {
     int stopped;
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
                                       __ATOMIC_ACQUIRE)) == 0) {
-        struct work_item* item = NULL;
+        struct thread_pool_work_item* item = NULL;
         if (thread_safe_queue_pop(&arg->thread_pool->queue, (void**)&item) ==
             0) {
             PG_ASSERT_NOT_EQ(item, NULL, "%p");
@@ -108,7 +108,8 @@ void thread_pool_wait_until_finished(struct thread_pool* thread_pool) {
     thread_pool_join(thread_pool);
 }
 
-int thread_pool_push(struct thread_pool* thread_pool, struct work_item* work) {
+int thread_pool_push(struct thread_pool* thread_pool,
+                     struct thread_pool_work_item* work) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(work, NULL, "%p");
 

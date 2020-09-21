@@ -31,15 +31,15 @@ Test(thread_pool, run_stop) {
     cr_expect_eq(thread_pool_init(&pool, 4, &allocator), 0);
 
     int count = 0;
-    struct work_item work_a = {.arg = &count, .fn = incr};
+    struct thread_pool_work_item work_a = {.arg = &count, .fn = incr};
     cr_expect_eq(thread_pool_push(&pool, &work_a), 0);
 
     thread_pool_start(&pool);
 
-    struct work_item work_b = {.arg = &count, .fn = incr};
+    struct thread_pool_work_item work_b = {.arg = &count, .fn = incr};
     cr_expect_eq(thread_pool_push(&pool, &work_b), 0);
 
-    struct work_item work_c = {.arg = &count, .fn = incr};
+    struct thread_pool_work_item work_c = {.arg = &count, .fn = incr};
     cr_expect_eq(thread_pool_push(&pool, &work_c), 0);
 
     thread_pool_wait_until_finished(&pool);
