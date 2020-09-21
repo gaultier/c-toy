@@ -16,34 +16,6 @@ struct thread_safe_queue {
     pthread_mutex_t mutex;
 };
 
-#define buf_get_at(data, len, val, index)                                   \
-    do {                                                                    \
-        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
-        if (index >= len) {                                                 \
-            fprintf(                                                        \
-                stderr,                                                     \
-                __FILE__                                                    \
-                ":%d:Error: accessing array at index %zu but len is %zu\n", \
-                __LINE__, index, len);                                      \
-            exit(EINVAL);                                                   \
-        }                                                                   \
-        val = data[index];                                                  \
-    } while (0)
-
-#define buf_set_at(data, len, val, index)                                   \
-    do {                                                                    \
-        PG_ASSERT_NOT_EQ(data, NULL, "%p");                                 \
-        if (index >= len) {                                                 \
-            fprintf(                                                        \
-                stderr,                                                     \
-                __FILE__                                                    \
-                ":%d:Error: accessing array at index %zu but len is %zu\n", \
-                __LINE__, index, len);                                      \
-            exit(EINVAL);                                                   \
-        }                                                                   \
-        data[index] = val;                                                  \
-    } while (0)
-
 int thread_safe_queue_init(struct thread_safe_queue* queue,
                            struct allocator* allocator) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
@@ -76,6 +48,7 @@ void thread_safe_queue_deinit(struct thread_safe_queue* queue,
 int thread_safe_queue_push(struct thread_safe_queue* queue,
                            const thread_safe_queue_data_t item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -101,6 +74,8 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
 int thread_safe_queue_pop(struct thread_safe_queue* queue,
                           thread_safe_queue_data_t* item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
+    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;

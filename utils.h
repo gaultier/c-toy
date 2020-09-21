@@ -6,21 +6,34 @@
         if (actual != expected) {                                     \
             fprintf(stderr,                                           \
                     __FILE__ ":%d:PG_ASSERT_EQ failed: expected=" fmt \
-                             ", actual=" fmt,                         \
+                             ", actual=" fmt "\n",                    \
                     __LINE__, expected, actual);                      \
             exit(EINVAL);                                             \
         }                                                             \
     } while (0)
 
-#define PG_ASSERT_NOT_EQ(actual, expected, fmt)                       \
-    do {                                                              \
-        if (actual == expected) {                                     \
-            fprintf(stderr,                                           \
-                    __FILE__ ":%d:PG_ASSERT_EQ failed: expected=" fmt \
-                             ", actual=" fmt,                         \
-                    __LINE__, expected, actual);                      \
-            exit(EINVAL);                                             \
-        }                                                             \
+#define PG_ASSERT_NOT_EQ(actual, expected, fmt)                           \
+    do {                                                                  \
+        if (actual == expected) {                                         \
+            fprintf(stderr,                                               \
+                    __FILE__ ":%d:PG_ASSERT_NOT_EQ failed: expected=" fmt \
+                             ", actual=" fmt "\n",                        \
+                    __LINE__, expected, actual);                          \
+            exit(EINVAL);                                                 \
+        }                                                                 \
+    } while (0)
+
+#define STR(s) #s
+
+#define PG_ASSERT_COND(a, cond, b, fmt)                           \
+    do {                                                          \
+        if (!((a)cond(b))) {                                      \
+            fprintf(stderr,                                       \
+                    __FILE__ ":%d:PG_ASSERT_COND failed: " fmt    \
+                             " " STR(cond) " " fmt " is false\n", \
+                    __LINE__, a, b);                              \
+            exit(EINVAL);                                         \
+        }                                                         \
     } while (0)
 
 void pg_nanosleep(size_t ns) {
