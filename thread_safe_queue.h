@@ -49,6 +49,7 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
                            const thread_safe_queue_data_t item) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
+    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
     int ret;
@@ -65,6 +66,8 @@ int thread_safe_queue_push(struct thread_safe_queue* queue,
         buf_set_at(queue->data, queue->capacity, item, i);
         queue->len += 1;
     }
+
+    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);
 
@@ -93,6 +96,8 @@ int thread_safe_queue_pop(struct thread_safe_queue* queue,
         queue->len -= 1;
         queue->start_current = (queue->start_current + 1) % queue->capacity;
     }
+
+    PG_ASSERT_COND(queue->len, <=, queue->capacity, "%zu");
 
     pthread_mutex_unlock(&queue->mutex);
 
