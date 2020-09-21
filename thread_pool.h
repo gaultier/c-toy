@@ -9,7 +9,7 @@ struct thread_pool_work_item {
     work_fn fn;
 };
 
-struct worker_arg {
+struct thread_pool_worker_arg {
     size_t id;
     struct thread_pool* thread_pool;
 };
@@ -18,13 +18,13 @@ struct thread_pool {
     size_t threads_len;
     struct thread_safe_queue queue;
     pthread_t* threads;
-    struct worker_arg* worker_args;
+    struct thread_pool_worker_arg* worker_args;
     size_t stopped;
 };
 
-void* worker(void* v_arg) {
+void* thread_pool_worker(void* v_arg) {
     PG_ASSERT_NOT_EQ(v_arg, NULL, "%p");
-    struct worker_arg* arg = v_arg;
+    struct thread_pool_worker_arg* arg = v_arg;
 
     int stopped;
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
@@ -61,7 +61,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
     thread_pool->threads_len = len;
 
     thread_pool->worker_args =
-        allocator->realloc(NULL, len * sizeof(struct worker_arg));
+        allocator->realloc(NULL, len * sizeof(struct thread_pool_worker_arg));
     if (thread_pool->worker_args == NULL) return ENOMEM;
 
     thread_pool->stopped = 0;
@@ -73,13 +73,14 @@ void thread_pool_start(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
-        thread_pool->worker_args[i] = (struct worker_arg){
+        thread_pool->worker_args[i] = (struct thread_pool_worker_arg){
             .id = i,
             .thread_pool = thread_pool,
         };
-        PG_ASSERT_EQ(pthread_create(&thread_pool->threads[i], NULL, worker,
-                                    &thread_pool->worker_args[i]),
-                     0, "%d");
+        PG_ASSERT_EQ(
+            pthread_create(&thread_pool->threads[i], NULL, thread_pool_worker,
+                           &thread_pool->worker_args[i]),
+            0, "%d");
     }
 }
 
