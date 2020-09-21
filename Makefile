@@ -2,11 +2,16 @@
 
 .SUFFIX:
 
-CFLAGS=-std=c99 -Wall -Wextra -g  
+CFLAGS=-std=c99 -Wall -Wextra -g -I/usr/local/include -L/usr/local/lib
 
-test: thread_safe_queue_test thread_pool_test
+
+all: test actor
+
+run_tests: test
 	./thread_safe_queue_test
 	./thread_pool_test
+
+test: thread_safe_queue_test thread_pool_test
 
 thread_safe_queue_test: thread_safe_queue_test.c thread_safe_queue.h utils.h
 	$(CC) $(CFLAGS) -fsanitize=address -lcriterion $< -o $@
