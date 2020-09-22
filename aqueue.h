@@ -18,9 +18,9 @@ struct aqueue_node_head {
 
 struct aqueue {
     size_t len;
-    struct aqueue_node_head* head;
-    struct aqueue_node_head* tail;
-    struct aqueue_node_head* free;
+    struct aqueue_node_head head;
+    /* struct aqueue_node_head* tail; */
+    struct aqueue_node_head free;
     struct aqueue_node* buffer;
 };
 
@@ -41,8 +41,13 @@ int aqueue_init(struct aqueue* queue, size_t max_size) {
         buf_push(queue->buffer, node);
     }
 
-    queue->head = NULL;
-    queue->tail = NULL;
+    queue->head.aba = 0;
+    queue->head.node = NULL;
+
+    queue->free.aba = 0;
+    queue->free.node = queue->buffer;
+
+    /* queue->tail = NULL; */
 
     return 0;
 }
@@ -53,70 +58,55 @@ void aqueue_deinit(struct aqueue* queue) {
     buf_free(queue->buffer);
 }
 
-/* int aqueue_push(struct aqueue* queue, const aqueue_data_t item) { */
-/*     PG_ASSERT_NOT_EQ(queue, NULL, "%p"); */
-/*     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p"); */
-/*     PG_ASSERT_NOT_EQ(item, NULL, "%p"); */
+struct aqueue_node* aqueue_pop1(struct aqueue_node_head* head) {
+    struct aqueue_node_head next;
+    struct aqueue_node_head* original_head = NULL;
 
-/*     int ret; */
-/*     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) { */
-/*     } */
-/*     if (ret != 0) return ret; */
+    __atomic_load(head, original_head, __ATOMIC_SEQ_CST);
 
-/*     { */
-/*         PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
-/*         PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
+    do {
+        if (original_head->node == NULL) return NULL;
 
-/*         if (aqueue_len(queue) == queue->capacity) { */
-/*             pthread_mutex_unlock(&queue->mutex); */
-/*             return ENOMEM; */
-/*         } */
-/*         const size_t i = */
-/*             (queue->start_current + aqueue_len(queue)) % queue->capacity; */
-/*         buf_set_at(queue->data, queue->capacity, item, i); */
-/*         __atomic_fetch_add(&queue->len, 1, __ATOMIC_ACQUIRE); */
-/*     } */
+        next.aba = original_head->aba + 1;
+        next.node = original_head->node->next;
+    } while (!__atomic_compare_exchange(head, original_head, &next, 1,
+                                        __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+    return original_head->node;
+}
 
-/*     PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
-/*     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
+void aqueue_push1(struct aqueue_node_head* head, struct aqueue_node* node) {
+    struct aqueue_node_head next;
+    struct aqueue_node_head* original_head = NULL;
 
-/*     pthread_mutex_unlock(&queue->mutex); */
+    __atomic_load(head, original_head, __ATOMIC_SEQ_CST);
 
-/*     return 0; */
-/* } */
+    do {
+        node->next = original_head->node;
+        next.aba = original_head->aba + 1;
+        next.node = node;
+    } while (!__atomic_compare_exchange(head, original_head, &next, 1,
+                                        __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+}
 
-/* int aqueue_pop(struct aqueue* queue, aqueue_data_t* item) { */
-/*     PG_ASSERT_NOT_EQ(queue, NULL, "%p"); */
-/*     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p"); */
-/*     PG_ASSERT_NOT_EQ(item, NULL, "%p"); */
+void* aqueue_pop(aqueue* queue) {
+    struct aqueue_node* node = aqueue_pop1(&queue->head);
+    if (node == NULL) return NULL;
 
-/*     int ret; */
-/*     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) { */
-/*     } */
-/*     if (ret != 0) return ret; */
+    __atomic_fetch_sub(&queue->len, 1, __ATOMIC_SEQ_CST);
+    void* value = node->value;
+    aqueue_push1(&queue->free, node);
 
-/*     { */
-/*         PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
-/*         PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
+    return value;
+}
 
-/*         if (aqueue_len(queue) == 0) { */
-/*             pthread_mutex_unlock(&queue->mutex); */
-/*             return EINVAL; */
-/*         } */
+int aqueue_push(aqueue* queue, void* data) {
+    struct aqueue_node* node = aqueue_pop1(queue->free);
+    if (node == NULL) return ENOMEM;
 
-/*         buf_get_at(queue->data, queue->capacity, *item,
- * queue->start_current); */
+    node->data = data;
+    aqueue_push1(&queue->head, node);
 
-/*         __atomic_fetch_add(&queue->len, -1, __ATOMIC_ACQUIRE); */
-/*         queue->start_current = (queue->start_current + 1) % queue->capacity;
- */
-/*     } */
+    __atomic_fetch_add(&queue->len, 1, __ATOMIC_SEQ_CST);
 
-/*     PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
-/*     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
-
-/*     pthread_mutex_unlock(&queue->mutex); */
-
-/*     return 0; */
-/* } */
-
+    return 0;
+}
