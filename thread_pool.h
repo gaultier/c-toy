@@ -1,7 +1,7 @@
 #pragma once
 
-#include "buf.h"
 #include "aqueue.h"
+#include "buf.h"
 #include "utils.h"
 
 typedef void (*work_fn)(void*);
@@ -33,8 +33,7 @@ void* thread_pool_worker(void* v_arg) {
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
                                       __ATOMIC_ACQUIRE)) == 0) {
         struct thread_pool_work_item* item = NULL;
-        if (aqueue_pop(&arg->thread_pool->queue, (void**)&item) ==
-            0) {
+        if (aqueue_pop(&arg->thread_pool->queue, (void**)&item) == 0) {
             PG_ASSERT_NOT_EQ(item, NULL, "%p");
             PG_ASSERT_NOT_EQ(item->fn, NULL, "%p");
 
@@ -77,10 +76,12 @@ void thread_pool_start(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
-        thread_pool->worker_args[i] = (struct thread_pool_worker_arg){
-            .id = i,
-            .thread_pool = thread_pool,
-        };
+        buf_push(thread_pool->worker_args, (struct thread_pool_worker_arg){
+                                               .id = i,
+                                               .thread_pool = thread_pool,
+                                           });
+        buf_push(thread_pool->threads, NULL);
+
         PG_ASSERT_EQ(
             pthread_create(&thread_pool->threads[i], NULL, thread_pool_worker,
                            &thread_pool->worker_args[i]),

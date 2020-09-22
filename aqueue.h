@@ -1,119 +1,122 @@
 #pragma once
-#include <errno.h>
-#include <pthread.h>
 
-#include "allocator.h"
+#include "buf.h"
 #include "utils.h"
 
 typedef void* aqueue_data_t;
+
+struct aqueue_node;
+struct aqueue_node {
+    void* data;
+    struct aqueue_node* next;
+};
+
 struct aqueue {
-    size_t capacity;
     size_t len;
-    size_t start_current;
-    aqueue_data_t* data;
-    pthread_mutex_t mutex;
-    struct allocator* allocator;
+    struct aqueue_node* head;
+    struct aqueue_node* tail;
+    struct aqueue_node* free;
+    struct aqueue_node* buffer;
 };
 
 size_t aqueue_len(struct aqueue* queue) {
     return __atomic_load_n(&queue->len, __ATOMIC_ACQUIRE);
 }
 
-int aqueue_init(struct aqueue* queue,
-                           struct allocator* allocator) {
+int aqueue_init(struct aqueue* queue) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
-    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
-
-    queue->allocator = allocator;
-    queue->capacity = 1000;
-    queue->data = allocator->realloc(
-        NULL, queue->capacity * sizeof(aqueue_data_t));
-    if (queue->data == NULL) return ENOMEM;
 
     queue->len = 0;
-    queue->start_current = 0;
+    queue->buffer = NULL;
 
-    int err;
-    if ((err = pthread_mutex_init(&queue->mutex, NULL)) != 0) return err;
+    queue->buffer = buf_grow(queue->buffer, 1000);
+
+    for (size_t i = 0; i < 1000; i++) {
+        struct aqueue_node node = {.data = NULL};
+        buf_push(queue->buffer, node);
+    }
+
+    for (size_t i = 0; i < buf_size(queue->buffer) - 1; i++) {
+        queue->buffer[i].next = &queue->buffer[i + 1];
+    }
+    queue->buffer[buf_size(queue->buffer)].next = NULL;
+
+    queue->head = NULL;
+    queue->tail = NULL;
 
     return 0;
 }
 
 void aqueue_deinit(struct aqueue* queue) {
     if (queue == NULL) return;
-    PG_ASSERT_NOT_EQ(queue->allocator, NULL, "%p");
 
-    if (queue->data != NULL) queue->allocator->free(queue->data);
-
-    pthread_mutex_destroy(&queue->mutex);  // FIXME: was `mutex` init-ed ?
+    buf_free(queue->buffer);
 }
 
-int aqueue_push(struct aqueue* queue,
-                           const aqueue_data_t item) {
-    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
-    PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
-    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+/* int aqueue_push(struct aqueue* queue, const aqueue_data_t item) { */
+/*     PG_ASSERT_NOT_EQ(queue, NULL, "%p"); */
+/*     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p"); */
+/*     PG_ASSERT_NOT_EQ(item, NULL, "%p"); */
 
-    int ret;
-    while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
-    }
-    if (ret != 0) return ret;
+/*     int ret; */
+/*     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) { */
+/*     } */
+/*     if (ret != 0) return ret; */
 
-    {
-        PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity,
-                       "%zu");
-        PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+/*     { */
+/*         PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
+/*         PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
 
-        if (aqueue_len(queue) == queue->capacity) {
-            pthread_mutex_unlock(&queue->mutex);
-            return ENOMEM;
-        }
-        const size_t i = (queue->start_current + aqueue_len(queue)) %
-                         queue->capacity;
-        buf_set_at(queue->data, queue->capacity, item, i);
-        __atomic_fetch_add(&queue->len, 1, __ATOMIC_ACQUIRE);
-    }
+/*         if (aqueue_len(queue) == queue->capacity) { */
+/*             pthread_mutex_unlock(&queue->mutex); */
+/*             return ENOMEM; */
+/*         } */
+/*         const size_t i = */
+/*             (queue->start_current + aqueue_len(queue)) % queue->capacity; */
+/*         buf_set_at(queue->data, queue->capacity, item, i); */
+/*         __atomic_fetch_add(&queue->len, 1, __ATOMIC_ACQUIRE); */
+/*     } */
 
-    PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu");
-    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+/*     PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
+/*     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
 
-    pthread_mutex_unlock(&queue->mutex);
+/*     pthread_mutex_unlock(&queue->mutex); */
 
-    return 0;
-}
+/*     return 0; */
+/* } */
 
-int aqueue_pop(struct aqueue* queue,
-                          aqueue_data_t* item) {
-    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
-    PG_ASSERT_NOT_EQ(queue->data, NULL, "%p");
-    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+/* int aqueue_pop(struct aqueue* queue, aqueue_data_t* item) { */
+/*     PG_ASSERT_NOT_EQ(queue, NULL, "%p"); */
+/*     PG_ASSERT_NOT_EQ(queue->data, NULL, "%p"); */
+/*     PG_ASSERT_NOT_EQ(item, NULL, "%p"); */
 
-    int ret;
-    while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) {
-    }
-    if (ret != 0) return ret;
+/*     int ret; */
+/*     while ((ret = pthread_mutex_trylock(&queue->mutex)) == EBUSY) { */
+/*     } */
+/*     if (ret != 0) return ret; */
 
-    {
-        PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity,
-                       "%zu");
-        PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+/*     { */
+/*         PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
+/*         PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
 
-        if (aqueue_len(queue) == 0) {
-            pthread_mutex_unlock(&queue->mutex);
-            return EINVAL;
-        }
+/*         if (aqueue_len(queue) == 0) { */
+/*             pthread_mutex_unlock(&queue->mutex); */
+/*             return EINVAL; */
+/*         } */
 
-        buf_get_at(queue->data, queue->capacity, *item, queue->start_current);
+/*         buf_get_at(queue->data, queue->capacity, *item,
+ * queue->start_current); */
 
-        __atomic_fetch_add(&queue->len, -1, __ATOMIC_ACQUIRE);
-        queue->start_current = (queue->start_current + 1) % queue->capacity;
-    }
+/*         __atomic_fetch_add(&queue->len, -1, __ATOMIC_ACQUIRE); */
+/*         queue->start_current = (queue->start_current + 1) % queue->capacity;
+ */
+/*     } */
 
-    PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu");
-    PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu");
+/*     PG_ASSERT_COND(aqueue_len(queue), <=, queue->capacity, "%zu"); */
+/*     PG_ASSERT_COND(queue->start_current, <=, queue->capacity, "%zu"); */
 
-    pthread_mutex_unlock(&queue->mutex);
+/*     pthread_mutex_unlock(&queue->mutex); */
 
-    return 0;
-}
+/*     return 0; */
+/* } */
 
