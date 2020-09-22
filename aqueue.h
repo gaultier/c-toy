@@ -88,19 +88,19 @@ void aqueue_push1(struct aqueue_node_head* head, struct aqueue_node* node) {
                                         __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
 }
 
-void* aqueue_pop(aqueue* queue) {
+void* aqueue_pop(struct aqueue* queue) {
     struct aqueue_node* node = aqueue_pop1(&queue->head);
     if (node == NULL) return NULL;
 
     __atomic_fetch_sub(&queue->len, 1, __ATOMIC_SEQ_CST);
-    void* value = node->value;
+    void* value = node->data;
     aqueue_push1(&queue->free, node);
 
     return value;
 }
 
-int aqueue_push(aqueue* queue, void* data) {
-    struct aqueue_node* node = aqueue_pop1(queue->free);
+int aqueue_push(struct aqueue* queue, void* data) {
+    struct aqueue_node* node = aqueue_pop1(&queue->free);
     if (node == NULL) return ENOMEM;
 
     node->data = data;
