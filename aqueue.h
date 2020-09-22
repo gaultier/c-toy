@@ -63,7 +63,8 @@ void* aqueue_pop(struct aqueue* queue) {
 
     while (1) {
         size_t front = __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE);
-        struct aqueue_node* x = &queue->nodes[front % AQUEUE_CAPACITY];
+        printf("aqueue_pop: front=%zu\n", front);
+        struct aqueue_node x = queue->nodes[front % AQUEUE_CAPACITY];
 
         if (front != __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE)) {
             puts("aqueue_pop: front outdated");
@@ -71,16 +72,15 @@ void* aqueue_pop(struct aqueue* queue) {
         }
 
         if (front == __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE)) {
-            puts("aqueue_pop: front == rear");
+            printf("aqueue_pop: front == rear : front=%zu \n", front);
             continue;  // empty queue
         }
 
-        if (x->data != NULL) {  // filled slot
-            struct aqueue_node new_x = {.data = NULL,
-                                        .version = x->version + 1};
+        if (x.data != NULL) {  // filled slot
+            struct aqueue_node new_x = {.data = NULL, .version = x.version + 1};
 
             if (__atomic_compare_exchange(
-                    &queue->nodes[front % AQUEUE_CAPACITY], x, &new_x, 1,
+                    &queue->nodes[front % AQUEUE_CAPACITY], &x, &new_x, 1,
                     __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) {
                 size_t new_front = front + 1;
 
@@ -88,7 +88,7 @@ void* aqueue_pop(struct aqueue* queue) {
                     &queue->front, &front, &new_front, 1, __ATOMIC_ACQUIRE,
                     __ATOMIC_ACQUIRE);  // try to increment front
 
-                return x->data;
+                return x.data;
             }
         } else {
             size_t new_front = front + 1;
