@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "aqueue.h"
 
@@ -10,12 +11,21 @@ void* push(void* arg) {
     struct aqueue* queue = arg;
     for (size_t i = 500; i < AQUEUE_CAPACITY; i++) {
         vals[i] = i;
-        printf("Auxiliary thread: pushing %zu\n", i);
+        printf("Auxiliary thread #%zu: pushing %zu len=%zu\n", i, i,
+               aqueue_len(queue));
         aqueue_push(queue, &vals[i]);
-        printf("Auxiliary thread: pushed=%zu\n", i);
+        printf("Auxiliary thread #%zu: pushed=%zu len=%zu\n", i, i,
+               aqueue_len(queue));
 
-        int* val = aqueue_pop(queue);
-        printf("Auxiliary thread: pop = %d\n", *val);
+        int* val;
+        while ((val = aqueue_pop(queue)) == NULL) {
+            printf("Auxiliary thread #%zu: sleeping len=%zu\n", i,
+                   aqueue_len(queue));
+            pg_nanosleep(10);
+            aqueue_push(queue, &vals[i]);
+        }
+        printf("Auxiliary thread #%zu: pop = %d len=%zu\n", i, *val,
+               aqueue_len(queue));
     }
     return NULL;
 }
@@ -27,12 +37,18 @@ int main() {
 
     for (size_t i = 0; i < 501; i++) {
         vals[i] = i;
-        printf("Main thread: pushing %zu\n", i);
+        printf("Main thread: pushing %zu len=%zu\n", i, aqueue_len(&queue));
         aqueue_push(&queue, &vals[i]);
-        printf("Main thread: pushed=%zu \n", i);
+        printf("Main thread: pushed=%zu  len=%zu\n", i, aqueue_len(&queue));
 
-        int* val = aqueue_pop(&queue);
-        printf("Main thread: pop = %d\n", *val);
+        int* val;
+        while ((val = aqueue_pop(&queue)) == NULL) {
+            printf("Main thread #%zu: sleeping len=%zu\n", i,
+                   aqueue_len(&queue));
+            pg_nanosleep(10);
+            aqueue_push(&queue, &vals[i]);
+        }
+        printf("Main thread: pop = %d len=%zu\n", *val, aqueue_len(&queue));
     }
     pthread_join(thread, NULL);
 }
