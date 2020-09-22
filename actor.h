@@ -81,6 +81,8 @@ int actor_system_init(struct actor_system* actor_system,
     PG_ASSERT_EQ(thread_pool_init(&actor_system->pool, 4, allocator), 0,
                  "%d");  // FIXME: nproc
 
+    thread_pool_start(&actor_system->pool);
+
     return 0;
 }
 
@@ -89,6 +91,8 @@ void actor_system_deinit(struct actor_system* actor_system) {
 
     PG_ASSERT_NOT_EQ(actor_system, NULL, "%p");
     PG_ASSERT_NOT_EQ(actor_system->allocator, NULL, "%p");
+
+    thread_pool_wait_until_finished(&actor_system->pool);
 
     if (actor_system->actors) buf_free(actor_system->actors);
     thread_safe_queue_deinit(&actor_system->central_message_queue);

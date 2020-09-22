@@ -70,8 +70,6 @@ int main() {
     struct actor actor;
     PG_ASSERT_EQ(actor_init(&actor, print, &actor_system), 0, "%d");
 
-    /* thread_pool_start(&pool); */
-    /* thread_pool_wait_until_finished(&pool); */
     actor_deinit(&actor);
     actor_system_deinit(&actor_system);
 }
