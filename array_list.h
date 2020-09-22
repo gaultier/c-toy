@@ -6,7 +6,7 @@
 #include "utils.h"
 
 struct array_list {
-    void* data;
+    void** data;
     size_t capacity;
     size_t len;
 };
@@ -27,14 +27,20 @@ int array_list_append(struct array_list* array_list, void* item,
     PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
     PG_ASSERT_NOT_EQ(item, NULL, "%p");
 
-    if ((array_list->len + 1) == array_list->capacity) {
+    if ((array_list->len + 1) >= array_list->capacity) {
         const size_t new_capacity = 1 + array_list->capacity * 2;
-        array_list->data = allocator->realloc(array_list->data, new_capacity);
+        array_list->data =
+            allocator->realloc(array_list->data, new_capacity * sizeof(item));
         if (array_list->data == NULL) return ENOMEM;
 
         array_list->capacity = new_capacity;
     }
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(array_list->data, NULL, "%p");
+    PG_ASSERT_COND(array_list->len, <, array_list->capacity, "%zu");
+    PG_ASSERT_COND(array_list->capacity, >=, (size_t)1, "%zu");
 
+    array_list->data[array_list->len] = item;
     array_list->len += 1;
 
     return 0;

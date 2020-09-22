@@ -1,6 +1,5 @@
 #include "actor.h"
 
-#include <stdio.h>
 #include <unistd.h>
 
 /* #include "aco.h" */
