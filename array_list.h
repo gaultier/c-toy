@@ -93,3 +93,14 @@ int array_list_pop(struct array_list* array_list, void** item) {
     array_list->len -= 1;
     return 0;
 }
+
+void** array_list_add_one_assume_capacity(struct array_list* array_list,
+                                          void* item) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_COND(array_list->len, <, array_list->capacity, "%zu");
+
+    array_list->len += 1;
+    array_list->data[array_list->len - 1] = item;
+
+    return &array_list->data[array_list->len - 1];
+}
