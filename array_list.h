@@ -54,3 +54,17 @@ void* array_list_get(struct array_list* array_list, size_t i) {
     buf_get_at(array_list->data, array_list->capacity, item, i);
     return item;
 }
+
+int array_list_pop(struct array_list* array_list, void** item) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+
+    if (array_list->len == 0) return EINVAL;
+    PG_ASSERT_NOT_EQ(array_list->data, NULL, "%p");
+
+    buf_get_at(array_list->data, array_list->capacity, *item,
+               array_list->len - 1);
+
+    array_list->len -= 1;
+    return 0;
+}
