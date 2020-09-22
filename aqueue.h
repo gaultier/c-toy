@@ -11,11 +11,16 @@ struct aqueue_node {
     struct aqueue_node* next;
 };
 
+struct aqueue_node_head {
+    size_t aba;
+    struct aqueue_node* node;
+};
+
 struct aqueue {
     size_t len;
-    struct aqueue_node* head;
-    struct aqueue_node* tail;
-    struct aqueue_node* free;
+    struct aqueue_node_head* head;
+    struct aqueue_node_head* tail;
+    struct aqueue_node_head* free;
     struct aqueue_node* buffer;
 };
 
