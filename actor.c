@@ -63,15 +63,15 @@ int main() {
     /* main_co = NULL; */
 
     struct allocator allocator = {.realloc = realloc, .free = free};
-    struct thread_pool pool;
-    PG_ASSERT_EQ(thread_pool_init(&pool, 4, &allocator), 0, "%d");
+
+    struct actor_system actor_system;
+    PG_ASSERT_EQ(actor_system_init(&actor_system, &allocator), 0, "%d");
 
     struct actor actor;
-    PG_ASSERT_EQ(actor_init(&pool, print, &actor, &allocator), 0, "%d");
+    PG_ASSERT_EQ(actor_init(&actor, print, &actor_system), 0, "%d");
 
-    thread_pool_start(&pool);
-
-    thread_pool_wait_until_finished(&pool);
-    thread_pool_deinit(&pool, &allocator);
-    actor_deinit(&actor, &allocator);
+    /* thread_pool_start(&pool); */
+    /* thread_pool_wait_until_finished(&pool); */
+    actor_deinit(&actor);
+    actor_system_deinit(&actor_system);
 }

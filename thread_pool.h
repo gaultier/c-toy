@@ -128,7 +128,8 @@ int thread_pool_push(struct thread_pool* thread_pool,
 
 void thread_pool_deinit(struct thread_pool* thread_pool,
                         struct allocator* allocator) {
-    PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
+    if (thread_pool == NULL) return;
+
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
     PG_ASSERT_NOT_EQ(allocator, NULL, "%p");

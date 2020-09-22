@@ -39,7 +39,7 @@ int thread_safe_queue_init(struct thread_safe_queue* queue,
 
 void thread_safe_queue_deinit(struct thread_safe_queue* queue,
                               struct allocator* allocator) {
-    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    if (queue == NULL) return;
     PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
 
     if (queue->data != NULL) allocator->free(queue->data);

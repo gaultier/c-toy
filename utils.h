@@ -3,26 +3,26 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define PG_ASSERT_EQ(actual, expected, fmt)                           \
-    do {                                                              \
-        if (actual != expected) {                                     \
-            fprintf(stderr,                                           \
-                    __FILE__ ":%d:PG_ASSERT_EQ failed: expected=" fmt \
-                             ", actual=" fmt "\n",                    \
-                    __LINE__, expected, actual);                      \
-            exit(EINVAL);                                             \
-        }                                                             \
-    } while (0)
-
-#define PG_ASSERT_NOT_EQ(actual, expected, fmt)                           \
+#define PG_ASSERT_EQ(actual, expected, fmt)                               \
     do {                                                                  \
-        if (actual == expected) {                                         \
+        if (actual != expected) {                                         \
             fprintf(stderr,                                               \
-                    __FILE__ ":%d:PG_ASSERT_NOT_EQ failed: expected=" fmt \
-                             ", actual=" fmt "\n",                        \
-                    __LINE__, expected, actual);                          \
+                    __FILE__ ":%d:PG_ASSERT_EQ failed: " #actual " (" fmt \
+                             ") != " #expected " (" fmt ")\n",            \
+                    __LINE__, actual, expected);                          \
             exit(EINVAL);                                                 \
         }                                                                 \
+    } while (0)
+
+#define PG_ASSERT_NOT_EQ(actual, expected, fmt)                               \
+    do {                                                                      \
+        if (actual == expected) {                                             \
+            fprintf(stderr,                                                   \
+                    __FILE__ ":%d:PG_ASSERT_NOT_EQ failed: " #actual " (" fmt \
+                             ") == " #expected " (" fmt ")\n",                \
+                    __LINE__, actual, expected);                              \
+            exit(EINVAL);                                                     \
+        }                                                                     \
     } while (0)
 
 #define STR(s) #s
