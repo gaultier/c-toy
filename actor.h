@@ -1,4 +1,5 @@
 #pragma once
+#include "allocator.h"
 #include "thread_pool.h"
 
 struct actor_system;
@@ -46,9 +47,7 @@ int actor_init(struct actor* actor, work_fn main,
     if ((err = thread_pool_push(&actor_system->pool, actor->work)) != 0)
         return err;
 
-    if ((err = aqueue_init(&actor->message_queue,
-                                      actor_system->allocator)) != 0)
-        return err;
+    memset(&actor->message_queue, 0, sizeof(actor->message_queue));
 
     return 0;
 }
@@ -61,8 +60,6 @@ void actor_deinit(struct actor* actor) {
     PG_ASSERT_NOT_EQ(actor->actor_system->allocator, NULL, "%p");
 
     if (actor->work != NULL) actor->actor_system->allocator->free(actor->work);
-
-    aqueue_deinit(&actor->message_queue);  // FIXME: was it init-ed?
 }
 
 int actor_system_init(struct actor_system* actor_system,
@@ -74,12 +71,9 @@ int actor_system_init(struct actor_system* actor_system,
     actor_system->allocator = allocator;
 
     int err;
-    if ((err = aqueue_init(&actor_system->central_message_queue,
-                                      allocator)) != 0)
-        return err;
 
-    PG_ASSERT_EQ(thread_pool_init(&actor_system->pool, 4, allocator), 0,
-                 "%d");  // FIXME: nproc
+    if ((err = thread_pool_init(&actor_system->pool, 4)) != 0)
+        return err;  // FIXME: nproc
 
     thread_pool_start(&actor_system->pool);
 
@@ -95,7 +89,6 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_wait_until_finished(&actor_system->pool);
 
     if (actor_system->actors) buf_free(actor_system->actors);
-    aqueue_deinit(&actor_system->central_message_queue);
 
     thread_pool_deinit(&actor_system->pool);
 }
@@ -110,12 +103,13 @@ int actor_send_message(struct actor* sender, struct actor_msg* msg) {
         struct actor* actor = &sender->actor_system->actors[i];
         if (actor->id == msg->receiver_id) {
             return aqueue_push(&actor->message_queue,
-                                          &msg);  // FIXME !!!
+                               &msg);  // FIXME !!!
         }
     }
     return EINVAL;
 }
 
 int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
-    return aqueue_pop(&actor->message_queue, (void**)msg);
+    *msg = aqueue_pop(&actor->message_queue);
+    return 0;
 }
