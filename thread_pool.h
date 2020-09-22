@@ -51,8 +51,8 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
 
-    thread_pool->threads = allocator->realloc(NULL, len * sizeof(pthread_t));
-    if (thread_pool->threads == NULL) return ENOMEM;
+    thread_pool->threads = NULL;
+    thread_pool->threads = buf_grow(thread_pool->threads, len);
 
     int ret;
     if ((ret = thread_safe_queue_init(&thread_pool->queue, allocator)) != 0) {
@@ -137,9 +137,9 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
         pthread_join(thread_pool->threads[i], NULL);
     }
 
-    if (thread_pool->threads != NULL) allocator->free(thread_pool->threads);
+    if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
     thread_safe_queue_deinit(&thread_pool->queue,
                              allocator);  // FIXME: was it init-ed?
 
-    buf_free(thread_pool->worker_args);
+    if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
 }
