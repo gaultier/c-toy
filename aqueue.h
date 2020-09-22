@@ -18,9 +18,9 @@ struct aqueue {
 /*     return __atomic_load_n(&queue->len, __ATOMIC_ACQUIRE); */
 /* } */
 
-void aqueue_push(struct aqueue* queue, struct aqueue_node* node) {
+void aqueue_push(struct aqueue* queue, void* data) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
-    PG_ASSERT_NOT_EQ(node, (struct aqueue_node*)NULL, "%p");
+    PG_ASSERT_NOT_EQ(data, NULL, "%p");
 
     while (1) {
         size_t rear = __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE);
@@ -34,7 +34,7 @@ void aqueue_push(struct aqueue* queue, struct aqueue_node* node) {
             continue;  // full queue
 
         if (x->data == NULL) {  // free slot
-            struct aqueue_node new_x = {.data = node->data,
+            struct aqueue_node new_x = {.data = data,
                                         .version = x->version + 1};
 
             if (__atomic_compare_exchange(&queue->nodes[rear % AQUEUE_CAPACITY],

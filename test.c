@@ -4,32 +4,35 @@
 
 #include "aqueue.h"
 
-/* void* push(void* arg) { */
-/*     struct aqueue* queue = arg; */
-/*     for (size_t i = 0; i < 500; i++) { */
-/*         printf("Auxiliary thread: popping\n"); */
-/*         int val = (int)aqueue_pop(queue); */
-/*         printf("Auxiliary thread: popped %d\n", val); */
-/*     } */
-/*     return NULL; */
-/* } */
+int vals[AQUEUE_CAPACITY] = {0};
+
+void* push(void* arg) {
+    struct aqueue* queue = arg;
+    for (size_t i = 500; i < AQUEUE_CAPACITY; i++) {
+        vals[i] = i;
+        printf("Auxiliary thread: pushing %zu\n", i);
+        aqueue_push(queue, &vals[i]);
+        printf("Auxiliary thread: pushed=%zu\n", i);
+
+        int* val = aqueue_pop(queue);
+        printf("Auxiliary thread: pop = %d\n", *val);
+    }
+    return NULL;
+}
 
 int main() {
     struct aqueue queue = {0};
-    /* pthread_t thread; */
-    /* pthread_create(&thread, NULL, push, &queue); */
+    pthread_t thread;
+    pthread_create(&thread, NULL, push, &queue);
 
-    int vals[AQUEUE_CAPACITY] = {0};
-    for (size_t i = 0; i < 500; i++) {
+    for (size_t i = 0; i < 501; i++) {
         vals[i] = i;
-        struct aqueue_node node = {.data = &vals[i]};
         printf("Main thread: pushing %zu\n", i);
-        aqueue_push(&queue, &node);
-        printf("Main thread: pushed=%zu front=%zu rear=%zu\n", i, queue.front,
-               queue.rear);
+        aqueue_push(&queue, &vals[i]);
+        printf("Main thread: pushed=%zu \n", i);
 
         int* val = aqueue_pop(&queue);
         printf("Main thread: pop = %d\n", *val);
     }
-    /* pthread_join(thread, NULL); */
+    pthread_join(thread, NULL);
 }
