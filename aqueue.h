@@ -29,17 +29,12 @@ int aqueue_init(struct aqueue* queue) {
     queue->len = 0;
     queue->buffer = NULL;
 
-    queue->buffer = buf_grow(queue->buffer, 1000);
+    buf_grow(queue->buffer, 1000);
 
     for (size_t i = 0; i < 1000; i++) {
-        struct aqueue_node node = {.data = NULL};
+        struct aqueue_node node = {.data = NULL, .next = &queue->buffer[i + 1]};
         buf_push(queue->buffer, node);
     }
-
-    for (size_t i = 0; i < buf_size(queue->buffer) - 1; i++) {
-        queue->buffer[i].next = &queue->buffer[i + 1];
-    }
-    queue->buffer[buf_size(queue->buffer)].next = NULL;
 
     queue->head = NULL;
     queue->tail = NULL;

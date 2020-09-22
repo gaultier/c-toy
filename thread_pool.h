@@ -53,7 +53,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
 
     thread_pool->allocator = allocator;
     thread_pool->threads = NULL;
-    thread_pool->threads = buf_grow(thread_pool->threads, len);
+    buf_grow(thread_pool->threads, len);
 
     int ret;
     if ((ret = aqueue_init(&thread_pool->queue, allocator)) != 0) {
@@ -63,7 +63,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
     thread_pool->threads_len = len;
 
     thread_pool->worker_args = NULL;
-    thread_pool->worker_args = buf_grow(thread_pool->worker_args, len);
+    buf_grow(thread_pool->worker_args, len);
 
     thread_pool->stopped = 0;
 
