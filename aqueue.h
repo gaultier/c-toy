@@ -28,15 +28,15 @@ size_t aqueue_len(struct aqueue* queue) {
     return __atomic_load_n(&queue->len, __ATOMIC_ACQUIRE);
 }
 
-int aqueue_init(struct aqueue* queue) {
+int aqueue_init(struct aqueue* queue, size_t max_size) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
 
     queue->len = 0;
     queue->buffer = NULL;
 
-    buf_grow(queue->buffer, 1000);
+    buf_grow(queue->buffer, max_size);
 
-    for (size_t i = 0; i < 1000; i++) {
+    for (size_t i = 0; i < max_size; i++) {
         struct aqueue_node node = {.data = NULL, .next = &queue->buffer[i + 1]};
         buf_push(queue->buffer, node);
     }

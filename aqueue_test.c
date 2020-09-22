@@ -4,7 +4,7 @@
 
 Test(aqueue, init) {
     struct aqueue queue;
-    cr_expect_eq(aqueue_init(&queue), 0);
+    cr_expect_eq(aqueue_init(&queue, 10), 0);
     aqueue_deinit(&queue);
 }
 
