@@ -2,7 +2,7 @@
 
 .SUFFIX:
 
-CFLAGS=-std=c99 -Wall -Wextra -g -I/usr/local/include -L/usr/local/lib
+CFLAGS=-std=c99 -Weverything -g -I/usr/local/include -L/usr/local/lib
 
 
 all: test actor
