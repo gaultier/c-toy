@@ -4,15 +4,13 @@
 
 Test(thread_pool, init_deinit) {
     struct thread_pool pool;
-    struct allocator allocator = {.realloc = realloc, .free = free};
-    cr_expect_eq(thread_pool_init(&pool, 4, &allocator), 0);
+    cr_expect_eq(thread_pool_init(&pool, 4), 0);
     thread_pool_deinit(&pool);
 }
 
 Test(thread_pool, start_stop) {
     struct thread_pool pool;
-    struct allocator allocator = {.realloc = realloc, .free = free};
-    cr_expect_eq(thread_pool_init(&pool, 4, &allocator), 0);
+    cr_expect_eq(thread_pool_init(&pool, 4), 0);
 
     thread_pool_start(&pool);
     thread_pool_stop(&pool);
@@ -26,8 +24,7 @@ void incr(void* arg) {
 
 Test(thread_pool, run_stop) {
     struct thread_pool pool;
-    struct allocator allocator = {.realloc = realloc, .free = free};
-    cr_expect_eq(thread_pool_init(&pool, 4, &allocator), 0);
+    cr_expect_eq(thread_pool_init(&pool, 4), 0);
 
     int count = 0;
     struct thread_pool_work_item work_a = {.arg = &count, .fn = incr};

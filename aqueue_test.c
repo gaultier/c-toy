@@ -4,7 +4,8 @@
 #include <pthread.h>
 
 Test(aqueue, push_pop_single) {
-    struct aqueue queue = {0};
+    struct aqueue queue;
+    memset(&queue, 0, sizeof(queue));
 
     int val = 99;
     cr_expect_eq(aqueue_len(&queue), 0);
@@ -31,7 +32,8 @@ void* push_pop(void* arg) {
 }
 
 Test(aqueue, push_pop_multi) {
-    struct aqueue queue = {0};
+    struct aqueue queue;
+    memset(&queue, 0, sizeof(queue));
 
     pthread_t thread;
     pthread_create(&thread, NULL, push_pop, &queue);

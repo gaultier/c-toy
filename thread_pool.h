@@ -1,5 +1,8 @@
 #pragma once
 
+#include <pthread.h>
+#include <string.h>  // memset
+
 #include "aqueue.h"
 #include "buf.h"
 #include "utils.h"
@@ -21,7 +24,6 @@ struct thread_pool {
     pthread_t* threads;
     struct thread_pool_worker_arg* worker_args;
     size_t stopped;
-    struct allocator* allocator;
 };
 
 void* thread_pool_worker(void* v_arg) {
@@ -32,13 +34,15 @@ void* thread_pool_worker(void* v_arg) {
     int stopped;
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
                                       __ATOMIC_ACQUIRE)) == 0) {
-        struct thread_pool_work_item* item = NULL;
-        if (aqueue_pop(&arg->thread_pool->queue, (void**)&item) == 0) {
-            PG_ASSERT_NOT_EQ(item, NULL, "%p");
+        struct thread_pool_work_item* item =
+            aqueue_pop(&arg->thread_pool->queue);
+        if (item != NULL) {
             PG_ASSERT_NOT_EQ(item->fn, NULL, "%p");
 
             item->fn(item->arg);
-        } else {
+        }
+
+        else {
             pg_nanosleep(10);
         }
     }
@@ -46,19 +50,13 @@ void* thread_pool_worker(void* v_arg) {
     return NULL;
 }
 
-int thread_pool_init(struct thread_pool* thread_pool, size_t len,
-                     struct allocator* allocator) {
+int thread_pool_init(struct thread_pool* thread_pool, size_t len) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
-    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
 
-    thread_pool->allocator = allocator;
     thread_pool->threads = NULL;
     buf_grow(thread_pool->threads, len);
 
-    int ret;
-    if ((ret = aqueue_init(&thread_pool->queue, allocator)) != 0) {
-        return ret;
-    }
+    memset(&thread_pool->queue, 0, sizeof(thread_pool->queue));
 
     thread_pool->threads_len = len;
 
@@ -76,10 +74,10 @@ void thread_pool_start(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
-        buf_push(thread_pool->worker_args, (struct thread_pool_worker_arg){
+        buf_push(thread_pool->worker_args, ((struct thread_pool_worker_arg){
                                                .id = i,
                                                .thread_pool = thread_pool,
-                                           });
+                                           }));
         buf_push(thread_pool->threads, NULL);
 
         PG_ASSERT_EQ(
@@ -133,14 +131,12 @@ void thread_pool_deinit(struct thread_pool* thread_pool) {
 
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
-    PG_ASSERT_NOT_EQ(thread_pool->allocator, NULL, "%p");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
         pthread_join(thread_pool->threads[i], NULL);
     }
 
     if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
-    aqueue_deinit(&thread_pool->queue);  // FIXME: was it init-ed?
 
     if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
 }
