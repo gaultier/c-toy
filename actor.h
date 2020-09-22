@@ -9,8 +9,6 @@ struct actor {
     struct thread_safe_queue message_queue;
 };
 
-struct actor_system {};
-
 int actor_init(struct thread_pool* pool, work_fn main, struct actor* actor,
                struct allocator* allocator) {
     PG_ASSERT_NOT_EQ(pool, NULL, "%p");
@@ -49,6 +47,11 @@ struct actor_msg {
     size_t sender_id;
     size_t receiver_id;
     void* data;
+};
+
+struct actor_system {
+    struct actor* actors;
+    struct thread_safe_queue central_message_queue;
 };
 
 int actor_send_message(struct actor* sender, struct actor_msg* msg) {

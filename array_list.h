@@ -1,0 +1,41 @@
+#pragma once
+
+#include <errno.h>
+
+#include "allocator.h"
+#include "utils.h"
+
+struct array_list {
+    void* data;
+    size_t capacity;
+    size_t len;
+};
+
+void array_list_init(struct array_list* array_list) {
+    array_list->len = 0;
+    array_list->capacity = 0;
+    array_list->data = NULL;
+}
+
+void array_list_deinit(struct array_list* array_list,
+                       struct allocator* allocator) {
+    if (array_list->data != NULL) allocator->free(array_list->data);
+}
+
+int array_list_append(struct array_list* array_list, void* item,
+                      struct allocator* allocator) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(item, NULL, "%p");
+
+    if ((array_list->len + 1) == array_list->capacity) {
+        const size_t new_capacity = 1 + array_list->capacity * 2;
+        array_list->data = allocator->realloc(array_list->data, new_capacity);
+        if (array_list->data == NULL) return ENOMEM;
+
+        array_list->capacity = new_capacity;
+    }
+
+    array_list->len += 1;
+
+    return 0;
+}

@@ -1,7 +1,6 @@
 #include "thread_safe_queue.h"
 
 #include <criterion/criterion.h>
-#include <stdlib.h>
 
 Test(buf, buf_get_at) {
     int data[5] = {1, 2, 3, 4, 5};

@@ -1,4 +1,6 @@
 #pragma once
+#include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #define PG_ASSERT_EQ(actual, expected, fmt)                           \

@@ -1,7 +1,6 @@
 #include "thread_pool.h"
 
 #include <criterion/criterion.h>
-#include <stdlib.h>
 
 Test(thread_pool, init_deinit) {
     struct thread_pool pool;
