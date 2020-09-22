@@ -15,6 +15,7 @@ Test(thread_safe_queue, init) {
     struct allocator allocator = {.realloc = realloc, .free = free};
 
     cr_expect_eq(thread_safe_queue_init(&queue, &allocator), 0);
+    thread_safe_queue_deinit(&queue);
 }
 
 Test(thread_safe_queue, pop_empty) {
@@ -26,6 +27,8 @@ Test(thread_safe_queue, pop_empty) {
     thread_safe_queue_data_t item;
     cr_expect_eq(thread_safe_queue_pop(&queue, &item), EINVAL);
     cr_expect_eq(queue.len, 0);
+
+    thread_safe_queue_deinit(&queue);
 }
 
 Test(thread_safe_queue, push) {
@@ -37,6 +40,8 @@ Test(thread_safe_queue, push) {
     int item = 1;
     cr_expect_eq(thread_safe_queue_push(&queue, &item), 0);
     cr_expect_eq(queue.len, 1);
+
+    thread_safe_queue_deinit(&queue);
 }
 
 Test(thread_safe_queue, push_pop) {
@@ -59,6 +64,8 @@ Test(thread_safe_queue, push_pop) {
         cr_expect_eq(*((int *)popped), 1);
         cr_expect_eq(queue.len, 0);
     }
+
+    thread_safe_queue_deinit(&queue);
 }
 
 Test(thread_safe_queue, push_nomem) {
@@ -86,6 +93,8 @@ Test(thread_safe_queue, push_nomem) {
     cr_expect_eq(queue.len, 999);
     cr_expect_eq(thread_safe_queue_push(&queue, &items[0]), 0);
     cr_expect_eq(queue.len, 1000);
+
+    thread_safe_queue_deinit(&queue);
 }
 
 void *pop(void *arg) {
@@ -122,6 +131,8 @@ Test(thread_safe_queue, pop_multi) {
     pthread_join(thread, NULL);
 
     cr_expect_eq(queue.len, 0);
+
+    thread_safe_queue_deinit(&queue);
 }
 
 void *push_pop(void *arg) {
@@ -166,4 +177,6 @@ Test(thread_safe_queue, push_pop_multi) {
     pthread_join(thread, NULL);
 
     cr_expect_eq(queue.len, 0);
+
+    thread_safe_queue_deinit(&queue);
 }

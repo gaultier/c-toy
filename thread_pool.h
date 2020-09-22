@@ -58,7 +58,6 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
 
     int ret;
     if ((ret = thread_safe_queue_init(&thread_pool->queue, allocator)) != 0) {
-        thread_safe_queue_deinit(&thread_pool->queue, allocator);
         return ret;
     }
 
@@ -140,8 +139,7 @@ void thread_pool_deinit(struct thread_pool* thread_pool) {
     }
 
     if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
-    thread_safe_queue_deinit(&thread_pool->queue,
-                             thread_pool->allocator);  // FIXME: was it init-ed?
+    thread_safe_queue_deinit(&thread_pool->queue);  // FIXME: was it init-ed?
 
     if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
 }

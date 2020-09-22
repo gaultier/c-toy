@@ -62,9 +62,7 @@ void actor_deinit(struct actor* actor) {
 
     if (actor->work != NULL) actor->actor_system->allocator->free(actor->work);
 
-    thread_safe_queue_deinit(
-        &actor->message_queue,
-        actor->actor_system->allocator);  // FIXME: was it init-ed?
+    thread_safe_queue_deinit(&actor->message_queue);  // FIXME: was it init-ed?
 }
 
 int actor_system_init(struct actor_system* actor_system,
@@ -93,8 +91,7 @@ void actor_system_deinit(struct actor_system* actor_system) {
     PG_ASSERT_NOT_EQ(actor_system->allocator, NULL, "%p");
 
     if (actor_system->actors) buf_free(actor_system->actors);
-    thread_safe_queue_deinit(&actor_system->central_message_queue,
-                             actor_system->allocator);
+    thread_safe_queue_deinit(&actor_system->central_message_queue);
 
     thread_pool_deinit(&actor_system->pool);
 }
