@@ -1,7 +1,7 @@
 #pragma once
 
 #include "buf.h"
-#include "thread_safe_queue.h"
+#include "aqueue.h"
 #include "utils.h"
 
 typedef void (*work_fn)(void*);
@@ -17,7 +17,7 @@ struct thread_pool_worker_arg {
 
 struct thread_pool {
     size_t threads_len;
-    struct thread_safe_queue queue;
+    struct aqueue queue;
     pthread_t* threads;
     struct thread_pool_worker_arg* worker_args;
     size_t stopped;
@@ -33,7 +33,7 @@ void* thread_pool_worker(void* v_arg) {
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
                                       __ATOMIC_ACQUIRE)) == 0) {
         struct thread_pool_work_item* item = NULL;
-        if (thread_safe_queue_pop(&arg->thread_pool->queue, (void**)&item) ==
+        if (aqueue_pop(&arg->thread_pool->queue, (void**)&item) ==
             0) {
             PG_ASSERT_NOT_EQ(item, NULL, "%p");
             PG_ASSERT_NOT_EQ(item->fn, NULL, "%p");
@@ -57,7 +57,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
     thread_pool->threads = buf_grow(thread_pool->threads, len);
 
     int ret;
-    if ((ret = thread_safe_queue_init(&thread_pool->queue, allocator)) != 0) {
+    if ((ret = aqueue_init(&thread_pool->queue, allocator)) != 0) {
         return ret;
     }
 
@@ -110,7 +110,7 @@ void thread_pool_wait_until_finished(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
 
-    while (thread_safe_queue_len(&thread_pool->queue) != 0) {
+    while (aqueue_len(&thread_pool->queue) != 0) {
         pg_nanosleep(10);
     }
     __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);
@@ -124,7 +124,7 @@ int thread_pool_push(struct thread_pool* thread_pool,
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
     PG_ASSERT_NOT_EQ(work, NULL, "%p");
 
-    return thread_safe_queue_push(&thread_pool->queue, work);
+    return aqueue_push(&thread_pool->queue, work);
 }
 
 void thread_pool_deinit(struct thread_pool* thread_pool) {
@@ -139,7 +139,7 @@ void thread_pool_deinit(struct thread_pool* thread_pool) {
     }
 
     if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
-    thread_safe_queue_deinit(&thread_pool->queue);  // FIXME: was it init-ed?
+    aqueue_deinit(&thread_pool->queue);  // FIXME: was it init-ed?
 
     if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
 }

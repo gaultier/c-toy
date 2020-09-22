@@ -8,7 +8,7 @@ struct actor {
     size_t id;
     size_t thread_id;
     work_fn main;
-    struct thread_safe_queue message_queue;
+    struct aqueue message_queue;
     struct actor_system* actor_system;
     struct thread_pool_work_item* work;
 };
@@ -21,7 +21,7 @@ struct actor_msg {
 
 struct actor_system {
     struct actor* actors;
-    struct thread_safe_queue central_message_queue;
+    struct aqueue central_message_queue;
     struct thread_pool pool;
     struct allocator* allocator;
 };
@@ -46,7 +46,7 @@ int actor_init(struct actor* actor, work_fn main,
     if ((err = thread_pool_push(&actor_system->pool, actor->work)) != 0)
         return err;
 
-    if ((err = thread_safe_queue_init(&actor->message_queue,
+    if ((err = aqueue_init(&actor->message_queue,
                                       actor_system->allocator)) != 0)
         return err;
 
@@ -62,7 +62,7 @@ void actor_deinit(struct actor* actor) {
 
     if (actor->work != NULL) actor->actor_system->allocator->free(actor->work);
 
-    thread_safe_queue_deinit(&actor->message_queue);  // FIXME: was it init-ed?
+    aqueue_deinit(&actor->message_queue);  // FIXME: was it init-ed?
 }
 
 int actor_system_init(struct actor_system* actor_system,
@@ -74,7 +74,7 @@ int actor_system_init(struct actor_system* actor_system,
     actor_system->allocator = allocator;
 
     int err;
-    if ((err = thread_safe_queue_init(&actor_system->central_message_queue,
+    if ((err = aqueue_init(&actor_system->central_message_queue,
                                       allocator)) != 0)
         return err;
 
@@ -95,7 +95,7 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_wait_until_finished(&actor_system->pool);
 
     if (actor_system->actors) buf_free(actor_system->actors);
-    thread_safe_queue_deinit(&actor_system->central_message_queue);
+    aqueue_deinit(&actor_system->central_message_queue);
 
     thread_pool_deinit(&actor_system->pool);
 }
@@ -109,7 +109,7 @@ int actor_send_message(struct actor* sender, struct actor_msg* msg) {
     for (size_t i = 0; i < buf_size(sender->actor_system->actors); i++) {
         struct actor* actor = &sender->actor_system->actors[i];
         if (actor->id == msg->receiver_id) {
-            return thread_safe_queue_push(&actor->message_queue,
+            return aqueue_push(&actor->message_queue,
                                           &msg);  // FIXME !!!
         }
     }
@@ -117,5 +117,5 @@ int actor_send_message(struct actor* sender, struct actor_msg* msg) {
 }
 
 int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
-    return thread_safe_queue_pop(&actor->message_queue, (void**)msg);
+    return aqueue_pop(&actor->message_queue, (void**)msg);
 }
