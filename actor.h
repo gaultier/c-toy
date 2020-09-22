@@ -100,12 +100,22 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_deinit(&actor_system->pool);
 }
 
-/* int actor_send_message(struct actor* sender, struct actor_msg* msg) { */
-/*     return thread_safe_queue_push(&sender->message_queue, msg);  // FIXME */
-/* } */
+int actor_send_message(struct actor* sender, struct actor_msg* msg) {
+    PG_ASSERT_NOT_EQ(sender, NULL, "%p");
+    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    PG_ASSERT_NOT_EQ(sender->actor_system, NULL, "%p");
+    PG_ASSERT_NOT_EQ(sender->actor_system->actors, NULL, "%p");
 
-/* int actor_receive_message(struct actor* actor, struct actor_msg** msg) { */
-/*     return thread_safe_queue_pop(&actor->message_queue, */
-/*                                  (thread_safe_queue_data_t*)msg);  // FIXME
- */
-/* } */
+    for (size_t i = 0; i < buf_size(sender->actor_system->actors); i++) {
+        struct actor* actor = &sender->actor_system->actors[i];
+        if (actor->id == msg->receiver_id) {
+            return thread_safe_queue_push(&actor->message_queue,
+                                          &msg);  // FIXME !!!
+        }
+    }
+    return EINVAL;
+}
+
+int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
+    return thread_safe_queue_pop(&actor->message_queue, (void**)msg);
+}

@@ -23,11 +23,22 @@
 /* } */
 
 void print(void* arg) {
-    int* value = arg;
-    if (value)
-        printf("PRINT %d\n", *value);
-    else
-        puts("PRINT NULL");
+    struct actor* self = arg;
+
+    struct actor_msg* msg = NULL;
+    while (1) {
+        if (actor_receive_message(self, &msg) != 0) {
+            pg_nanosleep(100);
+            continue;
+        }
+
+        PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+
+        printf("actor #%zu: Received message from actor #%zu\n", self->id,
+               msg->sender_id);
+
+        self->actor_system->allocator->free(msg);
+    }
 }
 
 int main() {
