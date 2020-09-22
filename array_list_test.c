@@ -27,7 +27,7 @@ Test(array_list, append) {
     cr_expect_eq(array_list.len, 1);
     cr_expect_gt(array_list.capacity, 0);
     cr_expect_neq(array_list.data, NULL);
-    /* cr_expect_eq(array_list.data[0], 1); */
+    cr_expect_eq(array_list.data[0], &val);
 
     array_list_deinit(&array_list, &allocator);
 }
