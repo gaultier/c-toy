@@ -53,3 +53,23 @@ Test(array_list, pop) {
 
     array_list_deinit(&array_list, &allocator);
 }
+
+Test(array_list, set) {
+    struct array_list array_list;
+
+    array_list_init(&array_list);
+
+    struct allocator allocator = {.realloc = realloc, .free = free};
+
+    int val = 1;
+    cr_expect_eq(array_list_append(&array_list, &val, &allocator), 0);
+
+    cr_expect_eq(array_list_get(&array_list, 0), &val);
+
+    int new_val = 2;
+    cr_expect_eq(array_list_set(&array_list, 1, &new_val), EINVAL);
+    cr_expect_eq(array_list_set(&array_list, 0, &new_val), 0);
+    cr_expect_eq(array_list_get(&array_list, 0), &new_val);
+
+    array_list_deinit(&array_list, &allocator);
+}

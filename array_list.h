@@ -22,6 +22,20 @@ void array_list_deinit(struct array_list* array_list,
     if (array_list->data != NULL) allocator->free(array_list->data);
 }
 
+int array_list_ensure_capacity(struct array_list* array_list, size_t capacity,
+                               struct allocator* allocator) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
+
+    array_list->data =
+        allocator->realloc(array_list->data, capacity * sizeof(void*));
+    if (array_list->data == NULL) return ENOMEM;
+
+    array_list->capacity = capacity;
+
+    return 0;
+}
+
 int array_list_append(struct array_list* array_list, void* item,
                       struct allocator* allocator) {
     PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
@@ -29,11 +43,11 @@ int array_list_append(struct array_list* array_list, void* item,
 
     if ((array_list->len + 1) >= array_list->capacity) {
         const size_t new_capacity = 1 + array_list->capacity * 2;
-        array_list->data =
-            allocator->realloc(array_list->data, new_capacity * sizeof(item));
-        if (array_list->data == NULL) return ENOMEM;
 
-        array_list->capacity = new_capacity;
+        int err;
+        if ((err = array_list_ensure_capacity(array_list, new_capacity,
+                                              allocator)) != 0)
+            return err;
     }
     PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
     PG_ASSERT_NOT_EQ(array_list->data, NULL, "%p");
@@ -53,6 +67,17 @@ void* array_list_get(struct array_list* array_list, size_t i) {
     void* item;
     buf_get_at(array_list->data, array_list->capacity, item, i);
     return item;
+}
+
+int array_list_set(struct array_list* array_list, size_t i, void* item) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(array_list->data, NULL, "%p");
+
+    if (i >= array_list->len) return EINVAL;
+
+    array_list->data[i] = item;
+
+    return 0;
 }
 
 int array_list_pop(struct array_list* array_list, void** item) {
