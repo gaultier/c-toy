@@ -45,3 +45,12 @@ int array_list_append(struct array_list* array_list, void* item,
 
     return 0;
 }
+
+void* array_list_get(struct array_list* array_list, size_t i) {
+    PG_ASSERT_NOT_EQ(array_list, NULL, "%p");
+    PG_ASSERT_NOT_EQ(array_list->data, NULL, "%p");
+
+    void* item;
+    buf_get_at(array_list->data, array_list->capacity, item, i);
+    return item;
+}
