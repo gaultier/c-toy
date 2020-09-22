@@ -21,6 +21,7 @@ struct thread_pool {
     pthread_t* threads;
     struct thread_pool_worker_arg* worker_args;
     size_t stopped;
+    struct allocator* allocator;
 };
 
 void* thread_pool_worker(void* v_arg) {
@@ -51,6 +52,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len,
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
 
+    thread_pool->allocator = allocator;
     thread_pool->threads = NULL;
     thread_pool->threads = buf_grow(thread_pool->threads, len);
 
@@ -126,13 +128,12 @@ int thread_pool_push(struct thread_pool* thread_pool,
     return thread_safe_queue_push(&thread_pool->queue, work);
 }
 
-void thread_pool_deinit(struct thread_pool* thread_pool,
-                        struct allocator* allocator) {
+void thread_pool_deinit(struct thread_pool* thread_pool) {
     if (thread_pool == NULL) return;
 
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
-    PG_ASSERT_NOT_EQ(allocator, NULL, "%p");
+    PG_ASSERT_NOT_EQ(thread_pool->allocator, NULL, "%p");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
         pthread_join(thread_pool->threads[i], NULL);
@@ -140,7 +141,7 @@ void thread_pool_deinit(struct thread_pool* thread_pool,
 
     if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
     thread_safe_queue_deinit(&thread_pool->queue,
-                             allocator);  // FIXME: was it init-ed?
+                             thread_pool->allocator);  // FIXME: was it init-ed?
 
     if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
 }

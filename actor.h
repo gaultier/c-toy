@@ -96,7 +96,7 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_safe_queue_deinit(&actor_system->central_message_queue,
                              actor_system->allocator);
 
-    thread_pool_deinit(&actor_system->pool, actor_system->allocator);
+    thread_pool_deinit(&actor_system->pool);
 }
 
 /* int actor_send_message(struct actor* sender, struct actor_msg* msg) { */

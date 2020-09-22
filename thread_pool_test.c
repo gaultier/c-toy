@@ -6,7 +6,7 @@ Test(thread_pool, init_deinit) {
     struct thread_pool pool;
     struct allocator allocator = {.realloc = realloc, .free = free};
     cr_expect_eq(thread_pool_init(&pool, 4, &allocator), 0);
-    thread_pool_deinit(&pool, &allocator);
+    thread_pool_deinit(&pool);
 }
 
 Test(thread_pool, start_stop) {
@@ -16,7 +16,7 @@ Test(thread_pool, start_stop) {
 
     thread_pool_start(&pool);
     thread_pool_stop(&pool);
-    thread_pool_deinit(&pool, &allocator);
+    thread_pool_deinit(&pool);
 }
 
 void incr(void* arg) {
@@ -42,7 +42,7 @@ Test(thread_pool, run_stop) {
     cr_expect_eq(thread_pool_push(&pool, &work_c), 0);
 
     thread_pool_wait_until_finished(&pool);
-    thread_pool_deinit(&pool, &allocator);
+    thread_pool_deinit(&pool);
 
     cr_expect_eq(count, 3);
 }
