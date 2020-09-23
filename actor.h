@@ -110,7 +110,7 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
 
     struct actor_msg* msg = realloc(NULL, sizeof(struct actor));
     PG_ASSERT_NOT_EQ(msg, NULL, "%p");
-    msg->receiver_id = 1;
+    msg->receiver_id = receiver_id;
     msg->sender_id = sender->id;
     msg->data = data;
 
