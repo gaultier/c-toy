@@ -45,13 +45,13 @@ int aqueue_push(struct aqueue* queue, void* data) {
                                         .version = x->version + 1};
 
             if (__atomic_compare_exchange(&queue->nodes[rear % AQUEUE_CAPACITY],
-                                          x, &new_x, 1, __ATOMIC_ACQUIRE,
-                                          __ATOMIC_ACQUIRE)) {
+                                          x, &new_x, 1, __ATOMIC_RELEASE,
+                                          __ATOMIC_RELEASE)) {
                 size_t new_rear = rear + 1;
 
                 __atomic_compare_exchange(
-                    &queue->rear, &rear, &new_rear, 1, __ATOMIC_ACQUIRE,
-                    __ATOMIC_ACQUIRE);  // try to increment rear
+                    &queue->rear, &rear, &new_rear, 1, __ATOMIC_RELEASE,
+                    __ATOMIC_RELEASE);  // try to increment rear
 
                 return 0;
             }
@@ -59,8 +59,8 @@ int aqueue_push(struct aqueue* queue, void* data) {
             size_t new_rear = rear + 1;
 
             __atomic_compare_exchange(
-                &queue->rear, &rear, &new_rear, 1, __ATOMIC_ACQUIRE,
-                __ATOMIC_ACQUIRE);  // help others increment rear
+                &queue->rear, &rear, &new_rear, 1, __ATOMIC_RELEASE,
+                __ATOMIC_RELEASE);  // help others increment rear
         }
     }
     return EBUSY;
@@ -87,12 +87,12 @@ void* aqueue_pop(struct aqueue* queue) {
 
             if (__atomic_compare_exchange(
                     &queue->nodes[front % AQUEUE_CAPACITY], &x, &new_x, 1,
-                    __ATOMIC_ACQUIRE, __ATOMIC_ACQUIRE)) {
+                    __ATOMIC_RELEASE, __ATOMIC_RELEASE)) {
                 size_t new_front = front + 1;
 
                 __atomic_compare_exchange(
-                    &queue->front, &front, &new_front, 1, __ATOMIC_ACQUIRE,
-                    __ATOMIC_ACQUIRE);  // try to increment front
+                    &queue->front, &front, &new_front, 1, __ATOMIC_RELEASE,
+                    __ATOMIC_RELEASE);  // try to increment front
 
                 return x.data;
             }
@@ -100,8 +100,8 @@ void* aqueue_pop(struct aqueue* queue) {
             size_t new_front = front + 1;
 
             __atomic_compare_exchange(
-                &queue->front, &front, &new_front, 1, __ATOMIC_ACQUIRE,
-                __ATOMIC_ACQUIRE);  // help others increment front
+                &queue->front, &front, &new_front, 1, __ATOMIC_RELEASE,
+                __ATOMIC_RELEASE);  // help others increment front
         }
     }
     return NULL;
