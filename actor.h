@@ -114,8 +114,7 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     for (size_t i = 0; i < buf_size(sender->actor_system->actors); i++) {
         struct actor* actor = sender->actor_system->actors[i];
         if (actor->id == msg->receiver_id) {
-            return aqueue_push(&actor->message_queue,
-                               &msg);  // FIXME !!!
+            return aqueue_push(&actor->message_queue, msg);
         }
     }
     return EINVAL;
