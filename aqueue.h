@@ -29,7 +29,7 @@ int aqueue_push(struct aqueue* queue, void* data) {
     PG_ASSERT_NOT_EQ(data, NULL, "%p");
 
     size_t trial = 0;
-    while (trial++ < 20) {
+    while (trial++ < 10) {
         size_t rear = __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE);
         struct aqueue_node* x = &queue->nodes[rear % AQUEUE_CAPACITY];
 
@@ -70,7 +70,7 @@ void* aqueue_pop(struct aqueue* queue) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
 
     size_t trials = 0;
-    while (trials++ < 20) {
+    while (trials++ < 10) {
         size_t front = __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE);
         struct aqueue_node x = queue->nodes[front % AQUEUE_CAPACITY];
 
