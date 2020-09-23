@@ -8,12 +8,8 @@ void print(void* arg) {
     struct actor* self = arg;
 
     struct actor_msg* msg = NULL;
-    while (1) {
-        if (actor_receive_message(self, &msg) != 0) {
-            pg_nanosleep(100);
-            continue;
-        }
-
+    int err;
+    while ((err = actor_receive_message(self, &msg)) == 0) {
         PG_ASSERT_NOT_EQ(msg, NULL, "%p");
 
         printf("actor #%zu: Received message from actor #%zu\n", self->id,
