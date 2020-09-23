@@ -36,6 +36,5 @@ int main() {
     int val = 99;
     PG_ASSERT_EQ(actor_send_message(&actor, 1, &val), 0, "%d");
 
-    actor_deinit(&actor);
     actor_system_deinit(&actor_system);
 }

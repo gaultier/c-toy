@@ -92,7 +92,13 @@ void actor_system_deinit(struct actor_system* actor_system) {
 
     thread_pool_wait_until_finished(&actor_system->pool);
 
-    if (actor_system->actors) buf_free(actor_system->actors);
+    if (actor_system->actors) {
+        for (size_t i = 0; i < buf_size(actor_system->actors); i++)
+            actor_deinit(actor_system->actors[i]);
+        // TODO: should we free(actor) ?
+
+        buf_free(actor_system->actors);
+    }
 
     thread_pool_deinit(&actor_system->pool);
 }
