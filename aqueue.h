@@ -79,7 +79,6 @@ void* aqueue_pop(struct aqueue* queue) {
         }
 
         if (front == __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE)) {
-            /* printf("aqueue_pop: front == rear : front=%zu \n", front); */
             continue;  // empty queue
         }
 

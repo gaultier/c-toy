@@ -21,11 +21,13 @@ struct actor_msg {
 };
 
 struct actor_system {
-    struct actor* actors;
+    struct actor** actors;
     struct aqueue central_message_queue;
     struct thread_pool pool;
     struct allocator* allocator;
 };
+
+static size_t id = 0;
 
 int actor_init(struct actor* actor, work_fn main,
                struct actor_system* actor_system) {
@@ -37,9 +39,9 @@ int actor_init(struct actor* actor, work_fn main,
         NULL, sizeof(struct thread_pool_work_item));
     if (actor->work == NULL) return ENOMEM;
 
-    actor->work->arg = NULL;
+    actor->work->arg = actor;
     actor->work->fn = main;
-    actor->id = 0;
+    actor->id = ++id;
     actor->thread_id = 0;
     actor->actor_system = actor_system;
 
@@ -48,6 +50,8 @@ int actor_init(struct actor* actor, work_fn main,
         return err;
 
     memset(&actor->message_queue, 0, sizeof(actor->message_queue));
+
+    buf_push(actor->actor_system->actors, actor);
 
     return 0;
 }
@@ -93,14 +97,22 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_deinit(&actor_system->pool);
 }
 
-int actor_send_message(struct actor* sender, struct actor_msg* msg) {
+int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     PG_ASSERT_NOT_EQ(sender, NULL, "%p");
-    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
     PG_ASSERT_NOT_EQ(sender->actor_system, NULL, "%p");
     PG_ASSERT_NOT_EQ(sender->actor_system->actors, NULL, "%p");
 
+    struct actor_msg* msg = realloc(NULL, sizeof(struct actor));
+    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    msg->receiver_id = 1;
+    msg->sender_id = sender->id;
+    msg->data = data;
+
+    printf("actor_send_message: sender_id=%zu receiver_id=%zu\n",
+           msg->sender_id, msg->receiver_id);
+
     for (size_t i = 0; i < buf_size(sender->actor_system->actors); i++) {
-        struct actor* actor = &sender->actor_system->actors[i];
+        struct actor* actor = sender->actor_system->actors[i];
         if (actor->id == msg->receiver_id) {
             return aqueue_push(&actor->message_queue,
                                &msg);  // FIXME !!!
@@ -110,6 +122,9 @@ int actor_send_message(struct actor* sender, struct actor_msg* msg) {
 }
 
 int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
+    PG_ASSERT_NOT_EQ(actor, NULL, "%p");
+    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+
     *msg = aqueue_pop(&actor->message_queue);
-    return 0;
+    return (*msg == NULL);
 }
