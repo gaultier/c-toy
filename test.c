@@ -1,54 +1,65 @@
+#include <assert.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <sys/time.h>
 
 #include "aqueue.h"
 
-int vals[AQUEUE_CAPACITY] = {0};
+int* numbers;
+const size_t len = 1000 * 1000 * 20;
 
-void* push(void* arg) {
+void* thread_fn(void* arg) {
     struct aqueue* queue = arg;
-    for (size_t i = 500; i < AQUEUE_CAPACITY; i++) {
-        vals[i] = i;
-        printf("Auxiliary thread #%zu: pushing %zu len=%zu\n", i, i,
-               aqueue_len(queue));
-        aqueue_push(queue, &vals[i]);
-        printf("Auxiliary thread #%zu: pushed=%zu len=%zu\n", i, i,
-               aqueue_len(queue));
+    assert(arg != NULL);
 
-        int* val;
-        while ((val = aqueue_pop(queue)) == NULL) {
-            printf("Auxiliary thread #%zu: sleeping len=%zu\n", i,
-                   aqueue_len(queue));
-            pg_nanosleep(10);
-            aqueue_push(queue, &vals[i]);
-        }
-        printf("Auxiliary thread #%zu: pop = %d len=%zu\n", i, *val,
-               aqueue_len(queue));
+    struct timeval start;
+    gettimeofday(&start, NULL);
+
+    for (size_t i = 0; i < 1000 * 1000; i++) {
+        for (int j = 0; j < 6; j++) aqueue_push(queue, &numbers[i]);
+        for (int j = 0; j < 6; j++) aqueue_pop(queue);
     }
+
+    struct timeval end;
+    gettimeofday(&end, NULL);
+
+    size_t duration_us = end.tv_sec * 1000 * 1000 + end.tv_usec -
+                         start.tv_sec * 1000 * 1000 + start.tv_usec;
+
+    printf("Thread finished: duration: %zu us, avg op duration: %f us\n",
+           duration_us, duration_us / (12.0 * 1000 * 1000));
     return NULL;
 }
 
-int main() {
-    struct aqueue queue = {0};
-    pthread_t thread;
-    pthread_create(&thread, NULL, push, &queue);
+int main(int argc, char* argv[]) {
+    assert(argc > 0);
 
-    for (size_t i = 0; i < 501; i++) {
-        vals[i] = i;
-        printf("Main thread: pushing %zu len=%zu\n", i, aqueue_len(&queue));
-        aqueue_push(&queue, &vals[i]);
-        printf("Main thread: pushed=%zu  len=%zu\n", i, aqueue_len(&queue));
-
-        int* val;
-        while ((val = aqueue_pop(&queue)) == NULL) {
-            printf("Main thread #%zu: sleeping len=%zu\n", i,
-                   aqueue_len(&queue));
-            pg_nanosleep(10);
-            aqueue_push(&queue, &vals[i]);
-        }
-        printf("Main thread: pop = %d len=%zu\n", *val, aqueue_len(&queue));
+    if (argc != 2) {
+        printf("Usage: %s <num_cpus>\n", argv[0]);
+        return 0;
     }
-    pthread_join(thread, NULL);
+
+    struct aqueue_node* nodes = calloc(sizeof(struct aqueue_node), len);
+    assert(nodes != NULL);
+
+    struct aqueue queue = aqueue_from_buffer(nodes);
+
+    numbers = malloc(sizeof(int) * len);
+    assert(numbers != NULL);
+
+    for (size_t i = 0; i < len; i++) numbers[i] = i;
+
+    const size_t num_cpus = strtoll(argv[1], NULL, 10);
+    pthread_t* threads = malloc(sizeof(pthread_t) * num_cpus);
+
+    for (size_t i = 0; i < num_cpus; i++) {
+        pthread_create(&threads[i], NULL, thread_fn, &queue);
+    }
+
+    for (size_t i = 0; i < num_cpus; i++) {
+        pthread_join(threads[i], NULL);
+    }
+
+    return 0;
 }

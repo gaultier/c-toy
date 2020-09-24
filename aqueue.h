@@ -13,9 +13,13 @@ struct aqueue_node {
 };
 
 struct aqueue {
-    struct aqueue_node nodes[AQUEUE_CAPACITY];
+    struct aqueue_node* nodes;
     size_t front, rear;
 };
+
+struct aqueue aqueue_from_buffer(struct aqueue_node* buffer) {
+    return (struct aqueue){.front = 0, .rear = 0, .nodes = buffer};
+}
 
 size_t aqueue_len(struct aqueue* queue) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
