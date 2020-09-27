@@ -22,7 +22,7 @@ void incr(void* arg) {
     __atomic_fetch_add(count, 1, __ATOMIC_ACQUIRE);
 }
 
-Test(thread_pool, run_stop) {
+Test(thread_pool, run) {
     struct thread_pool pool;
     cr_expect_eq(thread_pool_init(&pool, 4), 0);
 

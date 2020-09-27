@@ -30,6 +30,8 @@ void* thread_pool_worker(void* v_arg) {
     PG_ASSERT_NOT_EQ(v_arg, NULL, "%p");
     struct thread_pool_worker_arg* arg = v_arg;
     PG_ASSERT_NOT_EQ(arg->thread_pool, NULL, "%p");
+    PG_ASSERT_NOT_EQ(arg->thread_pool->queue.nodes, NULL, "%p");
+    PG_ASSERT_NOT_EQ(arg->thread_pool->queue.len, (size_t)0, "%zu");
 
     int stopped;
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,
@@ -56,7 +58,11 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len) {
     thread_pool->threads = NULL;
     buf_grow(thread_pool->threads, len);
 
-    memset(&thread_pool->queue, 0, sizeof(thread_pool->queue));
+    struct aqueue_node* nodes =
+        realloc(NULL, sizeof(struct aqueue_node) * 1000);
+    if (nodes == NULL) return ENOMEM;
+
+    aqueue_init(&thread_pool->queue, nodes, 1000);
 
     thread_pool->threads_len = len;
 
@@ -72,6 +78,7 @@ void thread_pool_start(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->queue.nodes, NULL, "%p");
 
     for (size_t i = 0; i < thread_pool->threads_len; i++) {
         buf_push(thread_pool->worker_args, ((struct thread_pool_worker_arg){
@@ -139,4 +146,6 @@ void thread_pool_deinit(struct thread_pool* thread_pool) {
     if (thread_pool->threads != NULL) buf_free(thread_pool->threads);
 
     if (thread_pool->worker_args != NULL) buf_free(thread_pool->worker_args);
+
+    if (thread_pool->queue.nodes != NULL) free(thread_pool->queue.nodes);
 }

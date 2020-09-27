@@ -3,7 +3,6 @@
 #include "utils.h"
 
 // Thread safe, lockless, zero-allocations queue.
-// TODO: check memory consistency levels (e.g __ATOMIC_ACQUIRE).
 
 struct aqueue_node {
     void* data;
@@ -21,6 +20,7 @@ void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes, size_t len) {
     queue->rear = 0;
     queue->len = len;
     queue->nodes = nodes;
+    memset(queue->nodes, 0, sizeof(struct aqueue_node) * len);
 }
 
 size_t aqueue_len(struct aqueue* queue) {

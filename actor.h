@@ -67,6 +67,8 @@ void actor_deinit(struct actor* actor) {
     PG_ASSERT_NOT_EQ(actor->actor_system->allocator, NULL, "%p");
 
     if (actor->work != NULL) actor->actor_system->allocator->free(actor->work);
+    if (actor->message_queue.nodes != NULL)
+        actor->actor_system->allocator->free(actor->message_queue.nodes);
 }
 
 int actor_system_init(struct actor_system* actor_system,
