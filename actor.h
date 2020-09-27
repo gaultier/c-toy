@@ -81,8 +81,8 @@ int actor_system_init(struct actor_system* actor_system,
 
     int err;
 
-    if ((err = thread_pool_init(&actor_system->pool, 4)) != 0)
-        return err;  // FIXME: nproc
+    // FIXME: nproc
+    if ((err = thread_pool_init(&actor_system->pool, 4)) != 0) return err;
 
     thread_pool_start(&actor_system->pool);
 

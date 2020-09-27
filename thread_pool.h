@@ -31,7 +31,7 @@ void* thread_pool_worker(void* v_arg) {
     struct thread_pool_worker_arg* arg = v_arg;
     PG_ASSERT_NOT_EQ(arg->thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(arg->thread_pool->queue.nodes, NULL, "%p");
-    PG_ASSERT_NOT_EQ(arg->thread_pool->queue.len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(arg->thread_pool->queue.capacity, (size_t)0, "%zu");
 
     int stopped;
     while ((stopped = __atomic_load_n(&arg->thread_pool->stopped,

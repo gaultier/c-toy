@@ -11,16 +11,17 @@ struct aqueue_node {
 
 struct aqueue {
     struct aqueue_node* nodes;
-    size_t len;
+    size_t capacity;
     size_t front, rear;
 };
 
-void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes, size_t len) {
+void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes,
+                 size_t capacity) {
     queue->front = 0;
     queue->rear = 0;
-    queue->len = len;
+    queue->capacity = capacity;
     queue->nodes = nodes;
-    memset(queue->nodes, 0, sizeof(struct aqueue_node) * len);
+    memset(queue->nodes, 0, sizeof(struct aqueue_node) * capacity);
 }
 
 size_t aqueue_len(struct aqueue* queue) {
@@ -38,21 +39,21 @@ int aqueue_push(struct aqueue* queue, void* data) {
     size_t trial = 0;
     while (trial++ < 10) {
         size_t rear = __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE);
-        struct aqueue_node* x = &queue->nodes[rear % queue->len];
+        struct aqueue_node* x = &queue->nodes[rear % queue->capacity];
 
         if (rear != __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE))
             continue;  // outdated view
 
         if (rear ==
-            __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE) + queue->len)
+            __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE) + queue->capacity)
             continue;  // full queue
 
         if (x->data == NULL) {  // free slot
             struct aqueue_node new_x = {.data = data,
                                         .version = x->version + 1};
 
-            if (__atomic_compare_exchange(&queue->nodes[rear % queue->len], x,
-                                          &new_x, 1, __ATOMIC_RELEASE,
+            if (__atomic_compare_exchange(&queue->nodes[rear % queue->capacity],
+                                          x, &new_x, 1, __ATOMIC_RELEASE,
                                           __ATOMIC_RELEASE)) {
                 size_t new_rear = rear + 1;
 
@@ -81,7 +82,7 @@ void* aqueue_pop(struct aqueue* queue) {
     while (trials++ < 10) {
         size_t front = __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE);
 
-        struct aqueue_node x = queue->nodes[front % queue->len];
+        struct aqueue_node x = queue->nodes[front % queue->capacity];
 
         if (front != __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE)) {
             continue;  // outdated view
@@ -94,9 +95,9 @@ void* aqueue_pop(struct aqueue* queue) {
         if (x.data != NULL) {  // filled slot
             struct aqueue_node new_x = {.data = NULL, .version = x.version + 1};
 
-            if (__atomic_compare_exchange(&queue->nodes[front % queue->len], &x,
-                                          &new_x, 1, __ATOMIC_RELEASE,
-                                          __ATOMIC_RELEASE)) {
+            if (__atomic_compare_exchange(
+                    &queue->nodes[front % queue->capacity], &x, &new_x, 1,
+                    __ATOMIC_RELEASE, __ATOMIC_RELEASE)) {
                 size_t new_front = front + 1;
 
                 __atomic_compare_exchange(
