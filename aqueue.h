@@ -77,6 +77,7 @@ int aqueue_push(struct aqueue* queue, void* data) {
 void* aqueue_pop(struct aqueue* queue) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
     PG_ASSERT_NOT_EQ(queue->nodes, NULL, "%p");
+    PG_ASSERT_NOT_EQ(queue->capacity, (size_t)0, "%zu");
 
     size_t trials = 0;
     while (trials++ < 10) {

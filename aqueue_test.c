@@ -47,5 +47,25 @@ Test(aqueue, push_pop_multi) {
         cr_expect_eq(aqueue_push(&queue, &vals[i]), 0);
         aqueue_pop(&queue);
     }
+
     pthread_join(thread, NULL);
+}
+
+Test(aqueue, push_pop_multi_heap) {
+    struct aqueue_node* nodes =
+        realloc(NULL, sizeof(struct aqueue_node) * 1000);
+    struct aqueue queue;
+    aqueue_init(&queue, nodes, 1000);
+
+    pthread_t thread;
+    pthread_create(&thread, NULL, push_pop, &queue);
+
+    for (size_t i = 0; i < 500; i++) {
+        vals[i] = i;
+        cr_expect_eq(aqueue_push(&queue, &vals[i]), 0);
+        aqueue_pop(&queue);
+    }
+    pthread_join(thread, NULL);
+
+    free(nodes);
 }

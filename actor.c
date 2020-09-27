@@ -2,8 +2,10 @@
 
 #include <unistd.h>
 
-const int PING = 1;
-const int PONG = 2;
+#define MSG_PING 1
+#define MSG_PONG 1
+int ping_data = 1;
+int pong_data = 2;
 
 int actor_ping_id = 0;
 int actor_pong_id = 0;
@@ -23,14 +25,15 @@ void fn_ping(void* arg) {
 
         PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
         switch (*((int*)msg->data)) {
-            case PING:
+            case MSG_PING:
                 puts("PING");
-                actor_send_message(self, actor_pong_id, &PONG);
+                actor_send_message(self, actor_pong_id, &pong_data);
                 break;
         }
 
         self->actor_system->allocator->free(msg);
     }
+    printf("actor #%zu finished\n", self->id);
 }
 
 void fn_pong(void* arg) {
@@ -48,13 +51,14 @@ void fn_pong(void* arg) {
 
         PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
         switch (*((int*)msg->data)) {
-            case PONG:
+            case MSG_PONG:
                 puts("PONG");
-                actor_send_message(self, actor_ping_id, &PING);
+                actor_send_message(self, actor_ping_id, &ping_data);
                 break;
         }
         self->actor_system->allocator->free(msg);
     }
+    printf("actor #%zu finished\n", self->id);
 }
 
 int main() {
@@ -73,5 +77,6 @@ int main() {
     printf("Pong: id=%zu\n", actor_pong.id);
     actor_pong_id = actor_pong.id;
 
-    actor_system_deinit(&actor_system);
+    thread_pool_wait_until_finished(&actor_system.pool);
+    /* actor_system_deinit(&actor_system); */
 }

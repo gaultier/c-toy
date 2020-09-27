@@ -7,7 +7,7 @@ struct actor;
 
 struct actor {
     size_t id;
-    size_t thread_id;
+    //    size_t thread_id;  // Unused for now, pin on a thread for later
     work_fn main;
     struct aqueue message_queue;
     struct actor_system* actor_system;
@@ -41,7 +41,6 @@ int actor_init(struct actor* actor, work_fn main,
     actor->work->arg = actor;
     actor->work->fn = main;
     actor->id = ++id;
-    actor->thread_id = 0;
     actor->actor_system = actor_system;
 
     int err;
@@ -82,7 +81,7 @@ int actor_system_init(struct actor_system* actor_system,
     int err;
 
     // FIXME: nproc
-    if ((err = thread_pool_init(&actor_system->pool, 4)) != 0) return err;
+    if ((err = thread_pool_init(&actor_system->pool, 1)) != 0) return err;
 
     thread_pool_start(&actor_system->pool);
 
@@ -104,8 +103,6 @@ void actor_system_deinit(struct actor_system* actor_system) {
     PG_ASSERT_NOT_EQ(actor_system, NULL, "%p");
     PG_ASSERT_NOT_EQ(actor_system->allocator, NULL, "%p");
 
-    thread_pool_wait_until_finished(&actor_system->pool);
-
     if (actor_system->actors) {
         for (size_t i = 0; i < buf_size(actor_system->actors); i++)
             actor_deinit(actor_system->actors[i]);
@@ -123,7 +120,8 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     PG_ASSERT_NOT_EQ(sender->actor_system->actors, NULL, "%p");
 
     struct actor_msg* msg = realloc(NULL, sizeof(struct actor));
-    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    if (msg == NULL) return ENOMEM;
+
     msg->receiver_id = receiver_id;
     msg->sender_id = sender->id;
     msg->data = data;
