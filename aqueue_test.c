@@ -54,6 +54,8 @@ Test(aqueue, push_pop_multi) {
 Test(aqueue, push_pop_multi_heap) {
     struct aqueue_node* nodes =
         realloc(NULL, sizeof(struct aqueue_node) * 1000);
+    cr_expect_neq(nodes, NULL);
+
     struct aqueue queue;
     aqueue_init(&queue, nodes, 1000);
 
