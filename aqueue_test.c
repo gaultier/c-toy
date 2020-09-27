@@ -3,9 +3,12 @@
 #include <criterion/criterion.h>
 #include <pthread.h>
 
+#define AQUEUE_CAPACITY 1000
+
 Test(aqueue, push_pop_single) {
+    struct aqueue_node nodes[AQUEUE_CAPACITY] = {0};
     struct aqueue queue;
-    memset(&queue, 0, sizeof(queue));
+    aqueue_init(&queue, nodes, AQUEUE_CAPACITY);
 
     int val = 99;
     cr_expect_eq(aqueue_len(&queue), 0);
@@ -32,8 +35,9 @@ void* push_pop(void* arg) {
 }
 
 Test(aqueue, push_pop_multi) {
+    struct aqueue_node nodes[AQUEUE_CAPACITY] = {0};
     struct aqueue queue;
-    memset(&queue, 0, sizeof(queue));
+    aqueue_init(&queue, nodes, AQUEUE_CAPACITY);
 
     pthread_t thread;
     pthread_create(&thread, NULL, push_pop, &queue);

@@ -43,7 +43,8 @@ int main(int argc, char* argv[]) {
     struct aqueue_node* nodes = calloc(sizeof(struct aqueue_node), len);
     assert(nodes != NULL);
 
-    struct aqueue queue = aqueue_from_buffer(nodes);
+    struct aqueue queue;
+    aqueue_init(&queue, nodes, len);
 
     numbers = malloc(sizeof(int) * len);
     assert(numbers != NULL);

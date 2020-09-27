@@ -22,7 +22,6 @@ struct actor_msg {
 
 struct actor_system {
     struct actor** actors;
-    struct aqueue central_message_queue;
     struct thread_pool pool;
     struct allocator* allocator;
 };
@@ -49,7 +48,11 @@ int actor_init(struct actor* actor, work_fn main,
     if ((err = thread_pool_push(&actor_system->pool, actor->work)) != 0)
         return err;
 
-    memset(&actor->message_queue, 0, sizeof(actor->message_queue));
+    struct aqueue_node* nodes = actor_system->allocator->realloc(
+        NULL, sizeof(struct aqueue_node) * 1000);
+    if (nodes == NULL) return ENOMEM;
+
+    aqueue_init(&actor->message_queue, nodes, 1000);
 
     buf_push(actor->actor_system->actors, actor);
 
