@@ -23,24 +23,19 @@ void fn_ping(void* arg) {
     struct actor* self = arg;
 
     struct actor_msg* msg = NULL;
-    int err;
-    while ((err = actor_receive_message(self, &msg)) == 0) {
-        PG_ASSERT_NOT_EQ(msg, NULL, "%p");
-
-        printf("actor #%zu: Received message from actor #%zu\n", self->id,
-               msg->sender_id);
+    while (received_ping == 0) {
+        actor_receive_message(self, &msg);
+        if (msg == NULL) continue;
 
         PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
         switch (*((int*)msg->data)) {
             case MSG_PING:
-                puts("PING");
                 received_ping = 1;
                 break;
         }
 
         self->actor_system->allocator->free(msg);
     }
-    printf("actor #%zu finished\n", self->id);
 }
 
 Test(actor, single_actor) {
