@@ -81,7 +81,7 @@ int actor_system_init(struct actor_system* actor_system,
     int err;
 
     // FIXME: nproc
-    if ((err = thread_pool_init(&actor_system->pool, 1)) != 0) return err;
+    if ((err = thread_pool_init(&actor_system->pool, 4)) != 0) return err;
 
     thread_pool_start(&actor_system->pool);
 
@@ -141,6 +141,8 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
 int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
     PG_ASSERT_NOT_EQ(actor, NULL, "%p");
     PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    PG_ASSERT_NOT_EQ(actor->message_queue.nodes, NULL, "%p");
+    PG_ASSERT_NOT_EQ(actor->message_queue.capacity, (size_t)0, "%zu");
 
     *msg = aqueue_pop(&actor->message_queue);
     return (*msg == NULL);

@@ -21,7 +21,7 @@ void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes,
     queue->rear = 0;
     queue->capacity = capacity;
     queue->nodes = nodes;
-    memset(queue->nodes, 0, sizeof(struct aqueue_node) * capacity);
+    memset(nodes, 0, sizeof(struct aqueue_node) * capacity);
 }
 
 size_t aqueue_len(struct aqueue* queue) {
