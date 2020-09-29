@@ -48,8 +48,9 @@ Test(actor, single_actor) {
 
     struct actor actor_ping;
     cr_expect_eq(actor_init(&actor_ping, one_shot_ping, &actor_system), 0);
+    printf("single_actor: %zu\n", actor_ping.id);
 
-    actor_send_message(&actor_ping, actor_ping.id, &ping_data);
+    cr_expect_eq(actor_send_message(&actor_ping, actor_ping.id, &ping_data), 0);
 
     thread_pool_wait_until_finished(&actor_system.pool);
 
@@ -58,7 +59,7 @@ Test(actor, single_actor) {
     actor_system_deinit(&actor_system);
 }
 
-#define MSG_PONG 1
+#define MSG_PONG 2
 int ping_pong_counter = 0;
 int ping_actor_id = 0;
 int pong_actor_id = 0;
@@ -77,7 +78,7 @@ void fn_counter_ping(void* arg) {
         PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
         switch (*((int*)msg->data)) {
             case MSG_PING:
-                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_RELEASE);
+                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_ACQUIRE);
                 actor_send_message(self, pong_actor_id, &pong_data);
                 break;
             default:
@@ -101,7 +102,7 @@ void fn_counter_pong(void* arg) {
         PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
         switch (*((int*)msg->data)) {
             case MSG_PONG:
-                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_RELEASE);
+                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_ACQUIRE);
                 actor_send_message(self, ping_actor_id, &ping_data);
                 break;
             default:
@@ -121,12 +122,16 @@ Test(actor, ping_pong) {
     struct actor actor_ping;
     cr_expect_eq(actor_init(&actor_ping, fn_counter_ping, &actor_system), 0);
     ping_actor_id = actor_ping.id;
+    printf("ping_actor_id: %d\n", ping_actor_id);
 
     struct actor actor_pong;
     cr_expect_eq(actor_init(&actor_pong, fn_counter_pong, &actor_system), 0);
     pong_actor_id = actor_pong.id;
+    printf("pong_actor_id: %d\n", pong_actor_id);
 
-    actor_send_message(&actor_ping, actor_ping.id, &ping_data);
+    cr_expect_eq(actor_send_message(&actor_ping, actor_pong.id, &pong_data), 0);
+    /* printf("actor_send_message: send=%zu receiver=%zu kind=%zu\n",
+     * actor_ping.id, a) */
 
     thread_pool_wait_until_finished(&actor_system.pool);
 

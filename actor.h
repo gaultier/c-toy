@@ -26,7 +26,7 @@ struct actor_system {
     struct allocator* allocator;
 };
 
-static size_t id = 0;
+static size_t id = 1;
 
 int actor_init(struct actor* actor, work_fn main,
                struct actor_system* actor_system) {
@@ -40,7 +40,7 @@ int actor_init(struct actor* actor, work_fn main,
 
     actor->work->arg = actor;
     actor->work->fn = main;
-    actor->id = ++id;
+    actor->id = __atomic_fetch_add(&id, 1, __ATOMIC_ACQUIRE);
     actor->actor_system = actor_system;
 
     int err;

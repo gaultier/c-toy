@@ -3,12 +3,14 @@
 #include <unistd.h>
 
 #define MSG_PING 1
-#define MSG_PONG 1
+#define MSG_PONG 2
 int ping_data = 1;
 int pong_data = 2;
 
 int actor_ping_id = 0;
 int actor_pong_id = 0;
+
+int ping_pong_counter = 0;
 
 void fn_ping(void* arg) {
     PG_ASSERT_NOT_EQ(arg, NULL, "%p");
@@ -16,9 +18,9 @@ void fn_ping(void* arg) {
     struct actor* self = arg;
 
     struct actor_msg* msg = NULL;
-    int err;
-    while ((err = actor_receive_message(self, &msg)) == 0) {
-        PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    while (__atomic_load_n(&ping_pong_counter, __ATOMIC_ACQUIRE) < 5) {
+        actor_receive_message(self, &msg);
+        if (msg == NULL) continue;
 
         printf("actor #%zu: Received message from actor #%zu\n", self->id,
                msg->sender_id);
@@ -27,6 +29,7 @@ void fn_ping(void* arg) {
         switch (*((int*)msg->data)) {
             case MSG_PING:
                 puts("PING");
+                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_ACQUIRE);
                 actor_send_message(self, actor_pong_id, &pong_data);
                 break;
         }
@@ -42,9 +45,9 @@ void fn_pong(void* arg) {
     struct actor* self = arg;
 
     struct actor_msg* msg = NULL;
-    int err;
-    while ((err = actor_receive_message(self, &msg)) == 0) {
-        PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    while (__atomic_load_n(&ping_pong_counter, __ATOMIC_ACQUIRE) < 5) {
+        actor_receive_message(self, &msg);
+        if (msg == NULL) continue;
 
         printf("actor #%zu: Received message from actor #%zu\n", self->id,
                msg->sender_id);
@@ -53,6 +56,7 @@ void fn_pong(void* arg) {
         switch (*((int*)msg->data)) {
             case MSG_PONG:
                 puts("PONG");
+                __atomic_fetch_add(&ping_pong_counter, 1, __ATOMIC_ACQUIRE);
                 actor_send_message(self, actor_ping_id, &ping_data);
                 break;
         }
@@ -76,6 +80,9 @@ int main() {
     PG_ASSERT_EQ(actor_init(&actor_pong, fn_pong, &actor_system), 0, "%d");
     printf("Pong: id=%zu\n", actor_pong.id);
     actor_pong_id = actor_pong.id;
+
+    PG_ASSERT_EQ(actor_send_message(&actor_ping, actor_pong.id, &pong_data), 0,
+                 "%d");
 
     thread_pool_wait_until_finished(&actor_system.pool);
     /* actor_system_deinit(&actor_system); */
