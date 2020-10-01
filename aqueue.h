@@ -30,6 +30,7 @@ void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes,
 
 size_t aqueue_len(struct aqueue* queue) {
     PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_COND(queue->rear, >=, queue->front, "%zu");
 
     return __atomic_load_n(&queue->rear, __ATOMIC_ACQUIRE) -
            __atomic_load_n(&queue->front, __ATOMIC_ACQUIRE);
