@@ -44,15 +44,25 @@ Test(thread_pool, run_3) {
     cr_expect_eq(count, 3);
 }
 
+void decr(void* arg) {
+    int* count = arg;
+    __atomic_fetch_sub(count, 1, __ATOMIC_ACQUIRE);
+}
+
 Test(thread_pool, run_n) {
     struct thread_pool pool;
     cr_expect_eq(thread_pool_init(&pool, 4), 0);
 
     int count = 0;
     struct thread_pool_work_item work[400];
-    for (size_t i = 0; i < 400; i++) {
+    for (size_t i = 0; i < 300; i++) {
         work[i].arg = &count;
         work[i].fn = incr;
+        cr_expect_eq(thread_pool_push(&pool, &work[i]), 0);
+    }
+    for (size_t i = 300; i < 400; i++) {
+        work[i].arg = &count;
+        work[i].fn = decr;
         cr_expect_eq(thread_pool_push(&pool, &work[i]), 0);
     }
 
@@ -61,5 +71,5 @@ Test(thread_pool, run_n) {
     thread_pool_wait_until_finished(&pool);
     thread_pool_deinit(&pool);
 
-    cr_expect_eq(count, 400);
+    cr_expect_eq(count, 200);
 }
