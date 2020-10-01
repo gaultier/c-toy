@@ -115,6 +115,16 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_deinit(&actor_system->pool);
 }
 
+int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
+    PG_ASSERT_NOT_EQ(actor, NULL, "%p");
+    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
+    PG_ASSERT_NOT_EQ(actor->message_queue.nodes, NULL, "%p");
+    PG_ASSERT_NOT_EQ(actor->message_queue.capacity, (size_t)0, "%zu");
+
+    *msg = aqueue_pop(&actor->message_queue);
+    return (*msg == NULL);
+}
+
 void actor_system_run(struct actor_system* actor_system) {
     while (1) {
         for (size_t i = 0; i < buf_size(actor_system->actors); i++) {
@@ -155,12 +165,3 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     return EINVAL;
 }
 
-int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
-    PG_ASSERT_NOT_EQ(actor, NULL, "%p");
-    PG_ASSERT_NOT_EQ(msg, NULL, "%p");
-    PG_ASSERT_NOT_EQ(actor->message_queue.nodes, NULL, "%p");
-    PG_ASSERT_NOT_EQ(actor->message_queue.capacity, (size_t)0, "%zu");
-
-    *msg = aqueue_pop(&actor->message_queue);
-    return (*msg == NULL);
-}
