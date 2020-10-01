@@ -2,7 +2,7 @@
 
 #include "utils.h"
 
-// Thread safe, lockless, zero-allocations queue.
+// Thread safe, lockless, bounded, zero-allocations queue.
 
 struct aqueue_node {
     void* data;
