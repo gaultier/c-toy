@@ -19,7 +19,7 @@ struct thread_pool_worker_arg {
 };
 
 struct thread_pool {
-    size_t threads_len;
+    size_t threads_count;
     struct aqueue queue;
     pthread_t* threads;
     struct thread_pool_worker_arg* worker_args;
@@ -65,7 +65,7 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t threads_count) {
 
     aqueue_init(&thread_pool->queue, nodes, 1000);
 
-    thread_pool->threads_len = threads_count;
+    thread_pool->threads_count = threads_count;
 
     thread_pool->worker_args = NULL;
     buf_grow(thread_pool->worker_args, threads_count);
@@ -78,10 +78,10 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t threads_count) {
 void thread_pool_start(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
-    PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->threads_count, (size_t)0, "%zu");
     PG_ASSERT_NOT_EQ(thread_pool->queue.nodes, NULL, "%p");
 
-    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+    for (size_t i = 0; i < thread_pool->threads_count; i++) {
         buf_push(thread_pool->worker_args, ((struct thread_pool_worker_arg){
                                                .id = i,
                                                .thread_pool = thread_pool,
@@ -98,7 +98,7 @@ void thread_pool_start(struct thread_pool* thread_pool) {
 void thread_pool_join(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
 
-    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+    for (size_t i = 0; i < thread_pool->threads_count; i++) {
         PG_ASSERT_EQ(pthread_join(thread_pool->threads[i], NULL), 0, "%d");
     }
 }
@@ -106,7 +106,7 @@ void thread_pool_join(struct thread_pool* thread_pool) {
 void thread_pool_stop(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
-    PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->threads_count, (size_t)0, "%zu");
 
     __atomic_fetch_add(&thread_pool->stopped, 1, __ATOMIC_ACQUIRE);
     thread_pool_join(thread_pool);
@@ -115,7 +115,7 @@ void thread_pool_stop(struct thread_pool* thread_pool) {
 void thread_pool_wait_until_finished(struct thread_pool* thread_pool) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
-    PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->threads_count, (size_t)0, "%zu");
 
     while (aqueue_len(&thread_pool->queue) != 0) {
         pg_nanosleep(10);
@@ -128,7 +128,7 @@ int thread_pool_push(struct thread_pool* thread_pool,
                      struct thread_pool_work_item* work) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
-    PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->threads_count, (size_t)0, "%zu");
     PG_ASSERT_NOT_EQ(work, NULL, "%p");
 
     return aqueue_push(&thread_pool->queue, work);
@@ -138,9 +138,9 @@ void thread_pool_deinit(struct thread_pool* thread_pool) {
     if (thread_pool == NULL) return;
 
     PG_ASSERT_NOT_EQ(thread_pool->threads, NULL, "%p");
-    PG_ASSERT_NOT_EQ(thread_pool->threads_len, (size_t)0, "%zu");
+    PG_ASSERT_NOT_EQ(thread_pool->threads_count, (size_t)0, "%zu");
 
-    for (size_t i = 0; i < thread_pool->threads_len; i++) {
+    for (size_t i = 0; i < thread_pool->threads_count; i++) {
         pthread_join(thread_pool->threads[i], NULL);
     }
 
