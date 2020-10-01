@@ -88,14 +88,14 @@ int actor_system_init(struct actor_system* actor_system,
     return 0;
 }
 
-struct actor* actor_system_spawn(struct actor_system* actor_system,
-                                 work_fn main) {
-    struct actor* actor = malloc(sizeof(struct actor));
-    if (actor != NULL) return NULL;
+/* struct actor* actor_system_spawn(struct actor_system* actor_system, */
+/*                                  work_fn main) { */
+/*     struct actor* actor = malloc(sizeof(struct actor)); */
+/*     if (actor != NULL) return NULL; */
 
-    actor_init(actor, main, actor_system);
-    return actor;
-}
+/*     actor_init(actor, main, actor_system); */
+/*     return actor; */
+/* } */
 
 void actor_system_deinit(struct actor_system* actor_system) {
     if (actor_system == NULL) return;
