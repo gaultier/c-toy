@@ -52,11 +52,12 @@ void* thread_pool_worker(void* v_arg) {
     return NULL;
 }
 
-int thread_pool_init(struct thread_pool* thread_pool, size_t len) {
+int thread_pool_init(struct thread_pool* thread_pool, size_t threads_count) {
     PG_ASSERT_NOT_EQ(thread_pool, NULL, "%p");
+    PG_ASSERT_NOT_EQ(threads_count, (size_t)0, "%zu");
 
     thread_pool->threads = NULL;
-    buf_grow(thread_pool->threads, len);
+    buf_grow(thread_pool->threads, threads_count);
 
     struct aqueue_node* nodes =
         realloc(NULL, sizeof(struct aqueue_node) * 1000);
@@ -64,10 +65,10 @@ int thread_pool_init(struct thread_pool* thread_pool, size_t len) {
 
     aqueue_init(&thread_pool->queue, nodes, 1000);
 
-    thread_pool->threads_len = len;
+    thread_pool->threads_len = threads_count;
 
     thread_pool->worker_args = NULL;
-    buf_grow(thread_pool->worker_args, len);
+    buf_grow(thread_pool->worker_args, threads_count);
 
     thread_pool->stopped = 0;
 
