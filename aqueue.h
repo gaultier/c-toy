@@ -17,6 +17,10 @@ struct aqueue {
 
 void aqueue_init(struct aqueue* queue, struct aqueue_node* nodes,
                  size_t capacity) {
+    PG_ASSERT_NOT_EQ(queue, NULL, "%p");
+    PG_ASSERT_NOT_EQ(nodes, NULL, "%p");
+    PG_ASSERT_NOT_EQ(capacity, (size_t)0, "%zu");
+
     queue->front = 0;
     queue->rear = 0;
     queue->capacity = capacity;
