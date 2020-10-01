@@ -18,6 +18,7 @@ struct actor_msg {
     size_t sender_id;
     size_t receiver_id;
     void* data;
+    struct actor* receiver;
 };
 
 struct actor_system {
@@ -114,6 +115,21 @@ void actor_system_deinit(struct actor_system* actor_system) {
     thread_pool_deinit(&actor_system->pool);
 }
 
+void actor_system_run(struct actor_system* actor_system) {
+    while (1) {
+        for (size_t i = 0; i < buf_size(actor_system->actors); i++) {
+            struct actor* receiver = actor_system->actors[i];
+            struct actor_msg* msg = NULL;
+            actor_receive_message(receiver, &msg);
+            if (msg == NULL) continue;
+
+            receiver->main(msg);
+
+            actor_system->allocator->free(msg);
+        }
+    }
+}
+
 int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     PG_ASSERT_NOT_EQ(sender, NULL, "%p");
     PG_ASSERT_NOT_EQ(sender->actor_system, NULL, "%p");
@@ -132,6 +148,7 @@ int actor_send_message(struct actor* sender, size_t receiver_id, void* data) {
     for (size_t i = 0; i < buf_size(sender->actor_system->actors); i++) {
         struct actor* actor = sender->actor_system->actors[i];
         if (actor->id == msg->receiver_id) {
+            msg->receiver = actor;
             return aqueue_push(&actor->message_queue, msg);
         }
     }
