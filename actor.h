@@ -11,7 +11,7 @@ struct actor {
     work_fn main;
     struct aqueue message_queue;
     struct actor_system* actor_system;
-    struct thread_pool_work_item* work;
+    struct thread_pool_work_item work;
 };
 
 struct actor_msg {
@@ -35,17 +35,13 @@ int actor_init(struct actor* actor, work_fn main,
     PG_ASSERT_NOT_EQ(actor_system, NULL, "%p");
     PG_ASSERT_NOT_EQ(actor_system->allocator, NULL, "%p");
 
-    actor->work = actor_system->allocator->realloc(
-        NULL, sizeof(struct thread_pool_work_item));
-    if (actor->work == NULL) return ENOMEM;
-
-    actor->work->arg = actor;
-    actor->work->fn = main;
+    actor->work.arg = actor;
+    actor->work.fn = main;
     actor->id = __atomic_fetch_add(&id, 1, __ATOMIC_ACQUIRE);
     actor->actor_system = actor_system;
 
     int err;
-    if ((err = thread_pool_push(&actor_system->pool, actor->work)) != 0)
+    if ((err = thread_pool_push(&actor_system->pool, &actor->work)) != 0)
         return err;
 
     struct aqueue_node* nodes = actor_system->allocator->realloc(
@@ -66,7 +62,6 @@ void actor_deinit(struct actor* actor) {
     PG_ASSERT_NOT_EQ(actor->actor_system, NULL, "%p");
     PG_ASSERT_NOT_EQ(actor->actor_system->allocator, NULL, "%p");
 
-    if (actor->work != NULL) actor->actor_system->allocator->free(actor->work);
     if (actor->message_queue.nodes != NULL)
         actor->actor_system->allocator->free(actor->message_queue.nodes);
 }
@@ -126,11 +121,19 @@ int actor_receive_message(struct actor* actor, struct actor_msg** msg) {
 }
 
 void actor_system_run(struct actor_system* actor_system) {
+    PG_ASSERT_NOT_EQ(actor_system, NULL, "%p");
+    PG_ASSERT_NOT_EQ(actor_system->allocator, NULL, "%p");
+
     while (1) {
         for (size_t i = 0; i < buf_size(actor_system->actors); i++) {
             struct actor* receiver = actor_system->actors[i];
+            PG_ASSERT_NOT_EQ(receiver, NULL, "%p");
+            PG_ASSERT_NOT_EQ(receiver->main, NULL, "%p");
+
             struct actor_msg* msg = NULL;
+
             actor_receive_message(receiver, &msg);
+
             if (msg == NULL) continue;
 
             receiver->main(msg);

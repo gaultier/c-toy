@@ -21,7 +21,6 @@ void one_shot_ping(void* arg) {
     PG_ASSERT_NOT_EQ(arg, NULL, "%p");
 
     struct actor_msg* msg = arg;
-    struct actor* self = msg->receiver;
 
     PG_ASSERT_NOT_EQ(msg->data, NULL, "%p");
     switch (*((int*)msg->data)) {
